@@ -1,5 +1,21 @@
 Redmine = {
   /**
+   * load_issues:
+   *
+   * Retrieve the issues from the server
+   */
+  load_issues: function (callback) {
+    /* specifying the key in the GET request is the only way to make this
+     * work. Using the custom header will result in an OPTIONS request,
+     * which Redmine does not support.
+     *
+     * Redmine must either be abled with CORS or JSONP to make a cross
+     * domain request.
+     */
+    d3.json(REDMINE_URL + '/issues.json?key=' + API_KEY, callback);
+  },
+
+  /**
    * filter:
    *
    * Filter the data down to an interesting set of tasks and useful data.
@@ -20,7 +36,9 @@ Redmine = {
   /**
    * collate:
    *
-   * Collate the project tasks by status
+   * Collate the project tasks by status.
+   *
+   * Returns: a 2-d mapping of data
    */
   collate: function(data) {
     var projects = Redmine.projects(data);
@@ -49,6 +67,13 @@ Redmine = {
     return output;
   },
 
+  /**
+   * projects:
+   *
+   * List the projects in the data.
+   *
+   * Returns: an array of projects
+   */
   projects: function(data) {
     return d3.nest()
         .key(function(d) { return d.project; })
@@ -56,6 +81,13 @@ Redmine = {
       .map(function(d) { return d.key });
   },
 
+  /**
+   * statuses:
+   *
+   * List the statuses in the data.
+   *
+   * Returns: an array of statuses
+   */
   statuses: function(data) {
     return d3.nest()
         .key(function(d) { return d.status; })

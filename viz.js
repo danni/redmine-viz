@@ -1,4 +1,5 @@
 function main() {
+
   var margin = {
     top: 10,
     right: 10,
@@ -23,7 +24,7 @@ function main() {
     .append('g')
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-  d3.json('issues.json', function (error, data) {
+  Redmine.load_issues(function (error, data) {
     console.log("ERROR", error);
 
     data = Redmine.filter(data);
