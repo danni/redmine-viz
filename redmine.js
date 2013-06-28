@@ -12,7 +12,8 @@ Redmine = {
      * Redmine must either be abled with CORS or JSONP to make a cross
      * domain request.
      */
-    d3.json(REDMINE_URL + '/issues.json?key=' + API_KEY, callback);
+    d3.jsonp(REDMINE_URL + '/issues.json?key=' + API_KEY,
+             callback);
   },
 
   /**

@@ -24,8 +24,7 @@ function main() {
     .append('g')
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-  Redmine.load_issues(function (error, data) {
-    console.log("ERROR", error);
+  Redmine.load_issues(function (data) {
 
     data = Redmine.filter(data);
     var statuses = Redmine.statuses(data);
