@@ -66,7 +66,7 @@ Viz.prototype = {
         .data(data)
       .enter().append('rect')
         .attr('class', function(d) {
-          return cleanup(d.status) + ' ' + cleanup(d.project);
+          return cleanup(d.status) + ' P_' + cleanup(d.project);
         })
         .attr('x', function(d) { return x(d.y0); })
         .attr('y', function(d) { return y(d.status); })
