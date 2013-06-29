@@ -1,46 +1,55 @@
-function main() {
+'use strict';
 
-  var margin = {
-    top: 10,
-    right: 10,
-    bottom: 10,
-    left: 120
-  };
-  var width = 1000 - margin.left - margin.right;
-  var height = 300 - margin.top - margin.bottom;
+function Viz () {
+  this.init();
+}
 
-  var x = d3.scale.linear()
-      .range([0, width]);
-  var y = d3.scale.ordinal()
-      .rangeRoundBands([0, height], 0.2);
+Viz.prototype = {
 
-  var stack = d3.layout.stack()
-      .offset('zero')
-      .values(function(d) { return d.value; })
-      .x(function(d) { return d.key; })
-      .y(function(d) { return d.value.tickets; });
+  init: function () {
+    /* set up */
+    var margin = {
+      top: 10,
+      right: 10,
+      bottom: 10,
+      left: 120
+    };
+    var width = 1000 - margin.left - margin.right;
+    var height = 300 - margin.top - margin.bottom;
 
-  var svg = d3.select('body').append('svg')
-    .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+    this.x = d3.scale.linear()
+        .range([0, width]);
+    this.y = d3.scale.ordinal()
+        .rangeRoundBands([0, height], 0.2);
 
-  Redmine.load_issues(function (data) {
+    this.svg = d3.select('body').append('svg')
+      .append('g')
+        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    data = Redmine.filter(data);
-    var statuses = Redmine.statuses(data);
+    /* specify the domain of the axes */
+    // FIXME: x domain is hard coded
+    this.x.domain([0, 100]);
+    this.y.domain(FILTER_STATUSES);
+  },
 
-    data = Redmine.collate(data);
+  visualise: function (data) {
+
+    var x = this.x,
+        y = this.y,
+        svg = this.svg;
+
     data = d3.map(data).entries()
       .map(function(d) {
         return { key: d.key, value: d3.map(d.value).entries() };
     });
 
-    var layers = stack(data);
+    var stack = d3.layout.stack()
+        .offset('zero')
+        .values(function(d) { return d.value; })
+        .x(function(d) { return d.key; })
+        .y(function(d) { return d.value.tickets; });
 
-    /* specify the domain of the axes */
-    // FIXME: x domain is hard coded
-    x.domain([0, 100]);
-    y.domain(statuses);
+    var layers = stack(data);
 
     /* creates the bars */
     var project = svg.selectAll('g.project')
@@ -57,16 +66,18 @@ function main() {
         .attr('width', function(d) { return x(d.y); })
         .attr('height', y.rangeBand())
 
-    var labels = svg.selectAll('text')
+    var labels = svg.append('g')
+        .attr('class', 'labels')
+      .selectAll('text')
         .data(y.domain())
       .enter().append('text')
         .attr('class', 'label')
         .attr('x', -3)
         .attr('y', function(d) { return y(d) + y.rangeBand() / 2; })
         .text(function (d) { return d });
-  });
+  },
 }
 
-function cleanup(name) {
+function cleanup (name) {
   return name.replace(/[^A-Za-z0-9]+/g, '_');
 }
