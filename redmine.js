@@ -102,28 +102,18 @@ Redmine.prototype = {
    */
   collate: function(data) {
     var self = this;
-
-    var projects = self.projects(data);
-    var statuses = self.statuses(data);
     var output = {};
 
-    /* build the array of all project/status pairs.
-     * d3.nest() doesn't work usefully here because of the holes in the
-     * dataset */
-    projects.forEach(function(project) {
-      output[project] = {};
-
-      statuses.forEach(function(status) {
-        output[project][status] = {
-          status: status,
-          project: project,
-          tickets: 0
-        };
-      });
-    });
-
     data.forEach(function(d) {
-      output[d.project][d.status].tickets += 1;
+      try {
+        output[d.project].tickets += 1;
+      } catch (e) {
+        output[d.project] = {
+          project: d.project,
+          status: d.status,
+          tickets: 1
+        };
+      }
     });
 
     return output;
