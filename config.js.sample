@@ -1,0 +1,10 @@
+var REDMINE_SERVER = '';
+var REDMINE_PROJECT = 'projects';
+var API_KEY = '';
+
+var FILTER_STATUSES = [
+  "Blocked",
+  "Peer Review",
+  "Acceptance Test",
+  "Acceptance Test Failed",
+];

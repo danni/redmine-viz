@@ -12,7 +12,7 @@ Viz.prototype = {
       top: 10,
       right: 10,
       bottom: 10,
-      left: 120
+      left: 200
     };
     var width = 1000 - margin.left - margin.right;
     var height = 300 - margin.top - margin.bottom;
@@ -28,7 +28,7 @@ Viz.prototype = {
 
     /* specify the domain of the axes */
     // FIXME: x domain is hard coded
-    x.domain([0, 100]);
+    x.domain([0, 30]);
     y.domain(FILTER_STATUSES);
 
     this.labels = svg.append('g')
@@ -37,9 +37,11 @@ Viz.prototype = {
         .data(y.domain())
       .enter().append('text')
         .attr('class', 'label')
-        .attr('x', -3)
+        .attr('x', -6)
         .attr('y', function(d) { return y(d) + y.rangeBand() / 2; })
-        .text(function (d) { return d });
+        .text(function (d) { return d })
+      .transition().duration(750)
+        .attr('opacity', 1);
   },
 
   visualise: function (data) {
@@ -72,7 +74,10 @@ Viz.prototype = {
         .attr('y', function(d) { return y(d.status); })
         .attr('width', function(d) { return x(d.y) - x(d.y0); })
         .attr('height', y.rangeBand())
-        .attr('data-tickets', function(d) { return d.tickets });
+        .attr('data-tickets', function(d) { return d.tickets })
+        .attr('opacity', 0)
+      .transition().duration(750)
+        .attr('opacity', 1);
   },
 }
 
