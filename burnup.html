@@ -23,11 +23,9 @@
 
     var project = URI().fragment();
 
-    // var viz = new Burnup();
     var redmine = new Redmine(project);
-    redmine.load_issues(function (data) {
-      console.log(data);
-    }, '*');
-    // viz.visualise.bind(viz));
+    var viz = new Burnup(redmine);
+
+    viz.load();
   </script>
 </html>

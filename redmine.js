@@ -1,14 +1,22 @@
 'use strict';
 
 function Redmine (project) {
-  this.init(project || REDMINE_PROJECT);
+  this.project = project || REDMINE_PROJECT;
 }
 
 Redmine.prototype = {
-  init: function (project) {
-    var self = this;
 
-    self.project = project;
+  /**
+   * get_uri:
+   *
+   * Get a URI object for talking to the server.
+   *
+   * The object will have a path for the project set (you can unset this
+   * with uri.directory('') and the API key set.
+   */
+  get_uri: function () {
+    return URI(REDMINE_SERVER + '/projects/' + self.project + '/')
+        .addSearch('key', API_KEY);
   },
 
   /**
@@ -21,45 +29,40 @@ Redmine.prototype = {
     var self = this;
     var LIMIT = 100;
 
-    self.load_statuses(function (data) {
+    /* specifying the key in the GET request is the only way to make this
+     * work. Using the custom header will result in an OPTIONS request,
+     * which Redmine does not support.
+     *
+     * Redmine must either be enabled with JSONP to make a cross
+     * domain request.
+     */
+    var uri = self.get_uri()
+        .filename('issues.json')
+        .addSearch('limit', LIMIT);
 
-      self.status_map = d3.map(data);
+    if (status) {
+      uri.addSearch('status_id', status);
+    }
 
-      /* specifying the key in the GET request is the only way to make this
-       * work. Using the custom header will result in an OPTIONS request,
-       * which Redmine does not support.
-       *
-       * Redmine must either be enabled with JSONP to make a cross
-       * domain request.
-       */
-      var uri = URI(REDMINE_SERVER + '/projects/' + self.project + '/issues.json')
-          .addSearch('key', API_KEY)
-          .addSearch('limit', LIMIT);
+    var records = [];
 
-      if (status) {
-        uri.addSearch('status_id', status);
+    function get_all_data(data) {
+      records = records.concat(data.issues);
+
+      console.log("Have " + records.length + " records");
+
+      if (records.length < data.total_count) {
+        d3.jsonp(uri.addSearch('offset', records.length).normalize(),
+                 get_all_data);
+      } else {
+        console.log("Done");
+        callback(self.flatten(records));
       }
+    }
 
-      var records = [];
-
-      function get_all_data(data) {
-        records = records.concat(data.issues);
-
-        console.log("Have " + records.length + " records");
-
-        if (records.length < data.total_count) {
-          d3.jsonp(uri.addSearch('offset', records.length).normalize(),
-                   get_all_data);
-        } else {
-          console.log("Done");
-          callback(self.flatten(records));
-        }
-      }
-
-      /* make the first request */
-      console.log("Downloading");
-      d3.jsonp(uri.normalize(), get_all_data);
-    });
+    /* make the first request */
+    console.log("Downloading");
+    d3.jsonp(uri.normalize(), get_all_data);
   },
 
   /**
@@ -69,17 +72,21 @@ Redmine.prototype = {
    */
   load_statuses: function (callback) {
 
+    var self = this;
+
     /* short circuit the request */
-    if (this.status_map) {
-      callback(this.status_map);
+    if (self.status_map) {
+      callback(self.status_map);
       return;
     }
 
     var set = d3.set(FILTER_STATUSES),
         statuses = {};
 
-    d3.jsonp(URI(REDMINE_SERVER + '/issue_statuses.json')
-              .addSearch('key', API_KEY),
+    d3.jsonp(self.get_uri()
+              .directory('')
+              .filename('issue_statuses.json')
+              .normalize(),
              function (data) {
 
               data.issue_statuses.forEach(function(d) {
@@ -89,8 +96,24 @@ Redmine.prototype = {
                 }
               });
 
+              self.status_map = statuses;
+
               callback(statuses);
              });
+  },
+
+  /**
+   * load_versions:
+   */
+  load_versions: function (callback) {
+    var self = this;
+
+    d3.jsonp(self.get_uri()
+        .filename('versions.json')
+        .normalize(),
+        function (data) {
+          callback(data.versions);
+        });
   },
 
   /**

@@ -1,7 +1,11 @@
 'use strict';
 
-function Burnup () {
-  this.init();
+function Burnup (redmine) {
+  var self = this;
+
+  self.redmine = redmine;
+
+  self.init();
 }
 
 Burnup.prototype = {
@@ -48,41 +52,33 @@ Burnup.prototype = {
 */
   },
 
+  load: function () {
+    redmine.load_versions(function (versions) {
+      redmine.load_issues(function (issues) {
+
+        /* group the data by version */
+        var issues_grouped = d3.nest()
+          .key(function(d) { return d.fixed_version })
+          .map(issues);
+
+        console.log(issues);
+
+        /* sort the versions */
+        versions.forEach(function (version) {
+          version.issues = issues_grouped[version.name];
+        });
+
+        console.log(versions[0]);
+      }, '*');
+    });
+  },
+
   visualise: function (data) {
 
     var x = this.x,
         y = this.y,
         svg = this.svg;
 
-    data = d3.map(data).values();
-
-    /* calculate the stacking */
-    var y0 = 0;
-    data.forEach(function(d) {
-      d.y0 = y0;
-      d.y = y0 + d.tickets;
-
-      y0 = d.y;
-    });
-
-    /* create a single bar */
-    var projects = svg.append('g')
-        .attr('class', 'status')
-      .selectAll('rect')
-        .data(data)
-      .enter().append('rect')
-        .attr('class', function(d) {
-          return cleanup(d.status) + ' P_' + cleanup(d.project);
-        })
-        .attr('x', function(d) { return x(d.y0); })
-        .attr('y', function(d) { return y(d.status); })
-        .attr('width', function(d) { return x(d.y) - x(d.y0); })
-        .attr('height', y.rangeBand())
-        .attr('data-tickets', function(d) { return d.tickets })
-        .attr('opacity', 0)
-      .transition().duration(750)
-        .attr('opacity', 1);
-  },
 }
 
 function cleanup (name) {
