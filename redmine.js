@@ -45,15 +45,19 @@ Redmine.prototype = {
       function get_all_data(data) {
         records = records.concat(data.issues);
 
+        console.log("Have " + records.length + " records");
+
         if (records.length < data.total_count) {
           d3.jsonp(uri.addSearch('offset', records.length).normalize(),
                    get_all_data);
         } else {
-          callback(records);
+          console.log("Done");
+          callback(self.flatten(records));
         }
       }
 
       /* make the first request */
+      console.log("Downloading");
       d3.jsonp(uri.normalize(), get_all_data);
     });
   },
