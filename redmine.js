@@ -94,74 +94,28 @@ Redmine.prototype = {
   },
 
   /**
-   * filter:
+   * flatten:
    *
-   * Filter the data down to an interesting set of tasks and useful data.
+   * Flatten the data to something that makes sense
    */
-  filter: function (data) {
-    data = data.issues;
+  flatten: function (data) {
+    data.forEach(function (record) {
 
-    return data.map(function (d) {
-      return {
-        project: d.project.name,
-        tracker: d.tracker.name,
-        status: d.status.name,
-        updated: d.updated_on,
-      }
-    });
-  },
+      /* flatten out the custom fields */
+      record.custom_fields.forEach(function(d) {
+        record[d.name.toLowerCase()] = d.value;
+      });
 
-  /**
-   * collate:
-   *
-   * Collate the project tasks by status.
-   *
-   * Returns: a 2-d mapping of data
-   */
-  collate: function(data) {
-    var self = this;
-    var output = {};
+      delete record['custom_fields'];
 
-    data.forEach(function(d) {
-      try {
-        output[d.project].tickets += 1;
-      } catch (e) {
-        output[d.project] = {
-          project: d.project,
-          status: d.status,
-          tickets: 1
-        };
-      }
+      /* flatten all fields of type Object */
+      d3.map(record).forEach(function (k, v) {
+        if (v instanceof Object) {
+          record[k] = v.name;
+        }
+      });
     });
 
-    return output;
-  },
-
-  /**
-   * projects:
-   *
-   * List the projects in the data.
-   *
-   * Returns: an array of projects
-   */
-  projects: function(data) {
-    return d3.nest()
-        .key(function(d) { return d.project; })
-        .entries(data)
-      .map(function(d) { return d.key });
-  },
-
-  /**
-   * statuses:
-   *
-   * List the statuses in the data.
-   *
-   * Returns: an array of statuses
-   */
-  statuses: function(data) {
-    return d3.nest()
-        .key(function(d) { return d.status; })
-        .entries(data)
-      .map(function(d) { return d.key });
+    return data;
   },
 }
