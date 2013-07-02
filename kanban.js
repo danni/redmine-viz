@@ -1,10 +1,10 @@
 'use strict';
 
-function Viz () {
+function Kanban () {
   this.init();
 }
 
-Viz.prototype = {
+Kanban.prototype = {
 
   init: function () {
     /* set up */

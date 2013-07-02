@@ -13,14 +13,14 @@
 
     <script src="config.js"></script>
     <script src="redmine.js"></script>
-    <script src="viz.js"></script>
-    <script src="main.js"></script>
+    <script src="kanban.js"></script>
   </head>
 
   <body>
   </body>
 
   <script type="text/javascript">
-    main();
+    var viz = new Kanban();
+    var redmine = new Redmine(viz.visualise.bind(viz));
   </script>
 </html>
