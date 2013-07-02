@@ -20,7 +20,10 @@
   </body>
 
   <script type="text/javascript">
-    var viz = new Kanban();
-    var redmine = new Redmine(viz.visualise.bind(viz));
+
+    var redmine = new Redmine();
+    var viz = new Kanban(redmine);
+
+    viz.load();
   </script>
 </html>

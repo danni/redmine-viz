@@ -2,6 +2,8 @@
 
 function Redmine (project) {
   this.project = project || REDMINE_PROJECT;
+
+  console.log("Connected to Redmine project " + this.project);
 }
 
 Redmine.prototype = {
@@ -15,6 +17,8 @@ Redmine.prototype = {
    * with uri.directory('') and the API key set.
    */
   get_uri: function () {
+    var self = this;
+
     return URI(REDMINE_SERVER + '/projects/' + self.project + '/')
         .addSearch('key', API_KEY);
   },
@@ -96,9 +100,9 @@ Redmine.prototype = {
                 }
               });
 
-              self.status_map = statuses;
+              self.status_map = d3.map(statuses);
 
-              callback(statuses);
+              callback(self.status_map);
              });
   },
 

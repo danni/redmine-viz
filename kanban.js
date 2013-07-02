@@ -1,6 +1,8 @@
 'use strict';
 
-function Kanban () {
+function Kanban (redmine) {
+  this.redmine = redmine;
+
   this.init();
 }
 
@@ -44,22 +46,58 @@ Kanban.prototype = {
         .attr('opacity', 1);
   },
 
+  load: function () {
+    var self = this;
+
+    self.redmine.load_statuses(function (statuses) {
+
+      statuses.forEach(function (k, v) {
+        console.log("Loading " + k);
+        self.redmine.load_issues(function (issues) {
+          console.log(k + ": " + issues.length);
+
+          self.process(issues);
+        }, v);
+      });
+    });
+  },
+
+  process: function (data) {
+    var self = this;
+
+    /* group the issues by project */
+    data = d3.nest()
+        .key(function(d) { return d.project })
+        .map(data, d3.map);
+
+    /* rearrange the map and calculate the stacking */
+    var y0 = 0,
+        out = {};
+
+    data.forEach(function(k, v) {
+
+      out[k] = {
+        project: k,
+        status: v[0].status,
+        tickets: v,
+        y0: y0,
+        y: y0 + v.length
+      };
+
+      y0 = out[k].y;
+    });
+
+    /* flatten the data */
+    data = d3.map(out).values();
+
+    self.visualise(data);
+  },
+
   visualise: function (data) {
 
     var x = this.x,
         y = this.y,
         svg = this.svg;
-
-    data = d3.map(data).values();
-
-    /* calculate the stacking */
-    var y0 = 0;
-    data.forEach(function(d) {
-      d.y0 = y0;
-      d.y = y0 + d.tickets;
-
-      y0 = d.y;
-    });
 
     /* create a single bar */
     var projects = svg.append('g')
@@ -74,7 +112,7 @@ Kanban.prototype = {
         .attr('y', function(d) { return y(d.status); })
         .attr('width', function(d) { return x(d.y) - x(d.y0); })
         .attr('height', y.rangeBand())
-        .attr('data-tickets', function(d) { return d.tickets })
+        .attr('data-tickets', function(d) { return d.tickets.length })
         .attr('opacity', 0)
       .transition().duration(750)
         .attr('opacity', 1);
