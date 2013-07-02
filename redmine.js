@@ -1,30 +1,60 @@
 'use strict';
 
-function Redmine (visualise_callback) {
-  this.callback = visualise_callback;
-  this.init();
+function Redmine (project) {
+  this.init(project || REDMINE_PROJECT);
 }
 
 Redmine.prototype = {
-  init: function () {
+  init: function (project) {
     var self = this;
 
-    self.load_statuses(function (data) {
-      self.status_map = d3.map(data);
-
-      self.refresh_data();
-    });
+    self.project = project;
   },
 
-  refresh_data: function () {
-    var self = this;
+  /**
+   * load_issues:
+   *
+   * Load the issues for the project this Redmine was constructed with.
+   */
+  load_issues: function (callback, status) {
 
-    self.status_map.values().forEach(function(d) {
-      console.log("Loading " + d);
-      self.load_issues(d, function (data) {
-        console.log("loaded " + d, data);
-        self.callback(self.collate(self.filter(data)));
-      });
+    var self = this;
+    var LIMIT = 100;
+
+    self.load_statuses(function (data) {
+
+      self.status_map = d3.map(data);
+
+      /* specifying the key in the GET request is the only way to make this
+       * work. Using the custom header will result in an OPTIONS request,
+       * which Redmine does not support.
+       *
+       * Redmine must either be enabled with JSONP to make a cross
+       * domain request.
+       */
+      var uri = URI(REDMINE_SERVER + '/projects/' + self.project + '/issues.json')
+          .addSearch('key', API_KEY)
+          .addSearch('limit', LIMIT);
+
+      if (status) {
+        uri.addSearch('status_id', status);
+      }
+
+      var records = [];
+
+      function get_all_data(data) {
+        records = records.concat(data.issues);
+
+        if (records.length < data.total_count) {
+          d3.jsonp(uri.addSearch('offset', records.length).normalize(),
+                   get_all_data);
+        } else {
+          callback(records);
+        }
+      }
+
+      /* make the first request */
+      d3.jsonp(uri.normalize(), get_all_data);
     });
   },
 
@@ -34,6 +64,13 @@ Redmine.prototype = {
    * Retrieve the IDs for the statuses in the config key FILTER_STATUSES.
    */
   load_statuses: function (callback) {
+
+    /* short circuit the request */
+    if (this.status_map) {
+      callback(this.status_map);
+      return;
+    }
+
     var set = d3.set(FILTER_STATUSES),
         statuses = {};
 
@@ -50,29 +87,6 @@ Redmine.prototype = {
 
               callback(statuses);
              });
-  },
-
-  /**
-   * load_issues:
-   *
-   * Retrieve the issues from the server
-   */
-  load_issues: function (status, callback) {
-    /* specifying the key in the GET request is the only way to make this
-     * work. Using the custom header will result in an OPTIONS request,
-     * which Redmine does not support.
-     *
-     * Redmine must either be abled with CORS or JSONP to make a cross
-     * domain request.
-     */
-
-    d3.jsonp(URI(REDMINE_SERVER + REDMINE_PROJECT + '/issues.json')
-              .addSearch({
-                key: API_KEY,
-                'status_id': status,
-                limit: 100
-              }),
-             callback);
   },
 
   /**
