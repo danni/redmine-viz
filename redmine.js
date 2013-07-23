@@ -4,6 +4,9 @@ function Redmine (project) {
   this.project = project || REDMINE_PROJECT;
   this.cache_key = 'rmviz.' + self.project;
   
+  /* Set the cache object here. Either localStorage or a "fake"
+   * cache for compatibility
+   */
   if (Modernizr.localstorage) {
     this.cache = localStorage;
   } else {
@@ -40,8 +43,8 @@ Redmine.prototype = {
     var self = this;
     var LIMIT = 100;
     var cache_key = self.cache_key + '.issues';
+    var total_read = 0;
 
-    var records = [];
 
     /* specifying the key in the GET request is the only way to make this
      * work. Using the custom header will result in an OPTIONS request,
@@ -58,32 +61,46 @@ Redmine.prototype = {
       uri.addSearch('status_id', status);
     }
 
+    /* Add filter to disclude results that are in the cache */
     var updated = self._get_cached_issues_updated();
     if (typeof updated != 'undefined') {
+      /* Create the date string for redmine */
+      var numpad = d3.format('02');
       updated = new Date(updated);
       updated =
         updated.getFullYear() + '-' +
-        updated.getMonth() + '-' +
-        updated.getDay();
+        numpad(updated.getMonth() + 1) + '-' +
+        numpad(updated.getDate());
+
+      /* This is not perfect. It does not do time, so there is usually 1 day
+       * worth of overlap
+       */
       uri.addSearch('updated_on', '>=' + updated);
+
+      console.log(
+        this._count_cached_issues() + " cached records available from before " +
+        updated
+      );
+    } else {
+      console.log('No cached data available');
     }
 
     function get_all_data(data) {
-      records = records.concat(data.issues);
-
+      total_read += data.issues.length;
       for (var i = 0; i < data.issues.length; i++) {
         var issue = data.issues[i];
         self._put_cached_issue(issue.id, issue);
       }
 
-      console.log("Have " + records.length + " records");
+      console.log("Have " + total_read + " new or updated records");
 
-      if (records.length < data.total_count) {
+      if (total_read < data.total_count) {
         d3.jsonp(uri.addSearch('offset', records.length).normalize(),
                  get_all_data);
       } else {
-        console.log("Done");
-        callback(self.flatten(self._get_cached_issues()));
+        
+        console.log("Done (" + self._count_cached_issues() + " records total)");
+        callback(self.flatten(records));
       }
     }
 
@@ -91,16 +108,18 @@ Redmine.prototype = {
     console.log("Downloading");
     d3.jsonp(uri.normalize(), get_all_data);
   },
-  _get_cached_issue: function(issue) {
-    var data = this.cache[this.cache_key + '.issues.' + issue];
-    if (typeof data == 'undefined') return undefined;
-    return JSON.parse(data);
-  },
+
+  /**
+   * _put_cached_issue:
+   *
+   * Puts an issue into the cache and updates the cache updated value and the
+   * IDs list as necessary.
+   */
   _put_cached_issue: function(issue, data) {
     var isset = typeof this._get_cached_issue(issue) != 'undefined';
     this.cache[this.cache_key + '.issues.' + issue] = JSON.stringify(data);
 
-    // Update the last updated
+    /* Update the last updated */
     var updated = Date.parse(data.updated_on);
     var cache_updated = this._get_cached_issues_updated();
     if (typeof cache_updated == 'undefined') cache_updated = 0;
@@ -108,18 +127,42 @@ Redmine.prototype = {
       this.cache[this.cache_key + '.issues.updated'] = updated;
     }
 
-    // Update the ids list
+    /* Update the ids list */
     if (!isset) {
       var list = this._get_cached_issues_ids();
       list[list.length] = data.id;
       this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
     }
   },
+
+  /**
+   * _get_cached_issue:
+   *
+   * Single cached issue by it's issue ID, or undefined if it does not exist in
+   * the cache.
+   */
+  _get_cached_issue: function(issue) {
+    var data = this.cache[this.cache_key + '.issues.' + issue];
+    if (typeof data == 'undefined') return undefined;
+    return JSON.parse(data);
+  },
+
+  /**
+   * _get_cached_issues_ids:
+   *
+   * Full list of IDs for issues in the cache.
+   */
   _get_cached_issues_ids: function() {
     var list = this.cache[this.cache_key + '.issues.list'];
     if (typeof list == 'undefined') return [];
     return JSON.parse(list);
   },
+
+  /**
+   * _get_cached_issues:
+   *
+   * All issues in the cache.
+   */
   _get_cached_issues: function() {
     var issues = [];
     var ids    = this._get_cached_issues_ids();
@@ -128,9 +171,22 @@ Redmine.prototype = {
     }
     return issues;
   },
+
+  /**
+   * _count_cached_issues:
+   *
+   * A count of all issues in the cache.
+   */
   _count_cached_issues: function() {
-    return this._get_cached_issues().length;
+    return this._get_cached_issues_ids().length;
   },
+
+  /**
+   * _get_cached_issues_updated:
+   *
+   * Integer representation compatible with Date objects for the last update on
+   * issues in the cache.
+   */
   _get_cached_issues_updated: function() {
     var updated = this.cache[this.cache_key + '.issues.updated'];
     if (typeof updated == 'undefined') return undefined;
