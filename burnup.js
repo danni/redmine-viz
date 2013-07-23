@@ -78,6 +78,7 @@ Burnup.prototype = {
     var x = this.x,
         y = this.y,
         svg = this.svg;
+  }
 
 }
 
