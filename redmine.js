@@ -148,9 +148,9 @@ Redmine.prototype = {
    *
    * Updates the issues ID list to add the new ID.
    */
-  _update_ids_list: function(issueId) {
+  _update_ids_list: function(issue_id) {
       var list = this._get_cached_issues_ids();
-      list[list.length] = issueId;
+      list[list.length] = issue_id;
       this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
   },
 
@@ -160,8 +160,8 @@ Redmine.prototype = {
    * Single cached issue by it's issue ID, or undefined if it does not exist in
    * the cache.
    */
-  _get_cached_issue: function(issueId) {
-    var data = this.cache[this.cache_key + '.issues.' + issueId];
+  _get_cached_issue: function(issue_id) {
+    var data = this.cache[this.cache_key + '.issues.' + issue_id];
     if (typeof data == 'undefined') return undefined;
     return JSON.parse(data);
   },
