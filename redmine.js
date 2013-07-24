@@ -64,12 +64,7 @@ Redmine.prototype = {
     var updated = self._get_cached_issues_updated();
     if (typeof updated != 'undefined') {
       /* Create the date string for redmine */
-      var numpad = d3.format('02');
-      updated = new Date(updated);
-      updated =
-        updated.getFullYear() + '-' +
-        numpad(updated.getMonth() + 1) + '-' +
-        numpad(updated.getDate());
+      updated = d3.time.format('%Y-%m-%d')(new Date(updated));
 
       /* This is not perfect. It does not do time, so there is usually 1 day
        * worth of overlap
