@@ -1,0 +1,9 @@
+{
+  "name": "Redmine Visualisation",
+  "version": "0.1.0",
+  "dependencies": {
+    "less.js": "1.3.3",
+    "d3": "3.1.6",
+    "uri.js": "1.7.2"
+  }
+}
