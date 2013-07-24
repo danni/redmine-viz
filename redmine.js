@@ -116,7 +116,7 @@ Redmine.prototype = {
    */
   _put_cached_issue: function(issue) {
     var isset = typeof this._get_cached_issue(issue.id) != 'undefined';
-    this.cache[this.cache_key + '.issues.' + issue.id] = JSON.stringify(issue);
+    this._put_cached('issues.' + issue.id, issue);
 
     /* Update the last updated */
     this._update_last_updated(Date.parse(issue.updated_on));
@@ -137,7 +137,7 @@ Redmine.prototype = {
     var cache_updated = this._get_cached_issues_updated();
     if (typeof cache_updated == 'undefined') cache_updated = 0;
     if (updated_on > cache_updated) {
-      this.cache[this.cache_key + '.issues.updated'] = updated_on;
+      this._put_cached('issues.updated', updated_on);
       return true;
     }
     return false;
@@ -151,7 +151,27 @@ Redmine.prototype = {
   _update_ids_list: function(issue_id) {
       var list = this._get_cached_issues_ids();
       list[list.length] = issue_id;
-      this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
+      this._put_cached('issues.list', list);
+  },
+
+  /**
+   * _put_cached:
+   *
+   * Put an object into the cache under the root cache key.
+   */
+  _put_cached: function(key, data) {
+    this.cache[this.cache_key + '.' + key] = JSON.stringify(data);
+  },
+
+  /**
+   * _get_cached:
+   *
+   * Get either a JSON-parsed cached or default value under the root cache key.
+   */
+  _get_cached: function(key, def) {
+    var data = this.cache[this.cache_key + '.' + key];
+    if (typeof data == 'undefined') return def;
+    return JSON.parse(data);
   },
 
   /**
@@ -161,9 +181,10 @@ Redmine.prototype = {
    * the cache.
    */
   _get_cached_issue: function(issue_id) {
-    var data = this.cache[this.cache_key + '.issues.' + issue_id];
-    if (typeof data == 'undefined') return undefined;
-    return JSON.parse(data);
+    return this._get_cached(
+      'issues.' + issue_id,
+      undefined
+    );
   },
 
   /**
@@ -172,9 +193,10 @@ Redmine.prototype = {
    * Full list of IDs for issues in the cache.
    */
   _get_cached_issues_ids: function() {
-    var data = this.cache[this.cache_key + '.issues.list'];
-    if (typeof data == 'undefined') return [];
-    return JSON.parse(data);
+    return this._get_cached(
+      'issues.list',
+      []
+    );
   },
 
   /**
@@ -207,9 +229,11 @@ Redmine.prototype = {
    * issues in the cache.
    */
   _get_cached_issues_updated: function() {
-    var updated = this.cache[this.cache_key + '.issues.updated'];
-    if (typeof updated == 'undefined') return undefined;
-    return parseInt(updated);
+    var updated = this._get_cached(
+      'issues.updated',
+      undefined
+    );
+    return updated == undefined ? undefined : parseInt(updated);
   },
 
   /**
