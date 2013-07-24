@@ -95,12 +95,11 @@ Redmine.prototype = {
       console.log("Have " + total_read + " new or updated records");
 
       if (total_read < data.total_count) {
-        d3.jsonp(uri.addSearch('offset', records.length).normalize(),
+        d3.jsonp(uri.addSearch('offset', total_read).normalize(),
                  get_all_data);
       } else {
-        
         console.log("Done (" + self._count_cached_issues() + " records total)");
-        callback(self.flatten(records));
+        callback(self.flatten(self._get_cached_issues()));
       }
     }
 
