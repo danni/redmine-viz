@@ -2,6 +2,16 @@
 
 function Redmine (project) {
   this.project = project || REDMINE_PROJECT;
+  this.cache_key = 'rmviz.' + this.project;
+  
+  /* Set the cache object here. Either localStorage or a "fake"
+   * cache for compatibility
+   */
+  if (Modernizr.localstorage) {
+    this.cache = localStorage;
+  } else {
+    this.cache = {};
+  }
 
   console.log("Connected to Redmine project " + this.project);
 }
@@ -32,6 +42,8 @@ Redmine.prototype = {
 
     var self = this;
     var LIMIT = 100;
+    var total_read = 0;
+
 
     /* specifying the key in the GET request is the only way to make this
      * work. Using the custom header will result in an OPTIONS request,
@@ -48,25 +60,174 @@ Redmine.prototype = {
       uri.addSearch('status_id', status);
     }
 
-    var records = [];
+    /* Add filter to disclude results that are in the cache */
+    var updated = self._get_cached_issues_updated();
+    if (typeof updated != 'undefined') {
+      /* Create the date string for redmine */
+      updated = d3.time.format('%Y-%m-%d')(new Date(updated));
+
+      /* This is not perfect. It does not do time, so there is usually 1 day
+       * worth of overlap
+       */
+      uri.addSearch('updated_on', '>=' + updated);
+
+      console.log(
+        this._count_cached_issues() + " cached records available from before " +
+        updated
+      );
+    } else {
+      console.log('No cached data available');
+    }
 
     function get_all_data(data) {
-      records = records.concat(data.issues);
+      total_read += data.issues.length;
+      for (var i = 0; i < data.issues.length; i++) {
+        var issue = data.issues[i];
+        self._put_cached_issue(issue);
+      }
 
-      console.log("Have " + records.length + " records");
+      console.log("Have " + total_read + " new or updated records");
 
-      if (records.length < data.total_count) {
-        d3.jsonp(uri.addSearch('offset', records.length).normalize(),
+      if (total_read < data.total_count) {
+        d3.jsonp(uri.addSearch('offset', total_read).normalize(),
                  get_all_data);
       } else {
-        console.log("Done");
-        callback(self.flatten(records));
+        console.log("Done (" + self._count_cached_issues() + " records total)");
+        callback(self.flatten(self._get_cached_issues()));
       }
     }
 
     /* make the first request */
     console.log("Downloading");
     d3.jsonp(uri.normalize(), get_all_data);
+  },
+
+  /**
+   * _put_cached_issue:
+   *
+   * Puts an issue into the cache and updates the cache updated value and the
+   * IDs list as necessary.
+   */
+  _put_cached_issue: function(issue) {
+    var isset = typeof this._get_cached_issue(issue.id) != 'undefined';
+    this._put_cached('issues.' + issue.id, issue);
+
+    /* Update the last updated */
+    this._update_last_updated(Date.parse(issue.updated_on));
+    
+    /* Update the ids list */
+    if (!isset) {
+      this._update_ids_list(issue.id);
+    }
+  },
+
+  /**
+   * _update_last_updated:
+   *
+   * Updates the latest cached update date if it's newer. And returns true if
+   * this was a new latest update or false if the cached date was newer.
+   */
+  _update_last_updated: function(updated_on) {
+    var cache_updated = this._get_cached_issues_updated();
+    if (typeof cache_updated == 'undefined') cache_updated = 0;
+    if (updated_on > cache_updated) {
+      this._put_cached('issues.updated', updated_on);
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * _update_ids_list:
+   *
+   * Updates the issues ID list to add the new ID.
+   */
+  _update_ids_list: function(issue_id) {
+      var list = this._get_cached_issues_ids();
+      list[list.length] = issue_id;
+      this._put_cached('issues.list', list);
+  },
+
+  /**
+   * _put_cached:
+   *
+   * Put an object into the cache under the root cache key.
+   */
+  _put_cached: function(key, data) {
+    this.cache[this.cache_key + '.' + key] = JSON.stringify(data);
+  },
+
+  /**
+   * _get_cached:
+   *
+   * Get either a JSON-parsed cached or default value under the root cache key.
+   */
+  _get_cached: function(key, def) {
+    var data = this.cache[this.cache_key + '.' + key];
+    if (typeof data == 'undefined') return def;
+    return JSON.parse(data);
+  },
+
+  /**
+   * _get_cached_issue:
+   *
+   * Single cached issue by it's issue ID, or undefined if it does not exist in
+   * the cache.
+   */
+  _get_cached_issue: function(issue_id) {
+    return this._get_cached(
+      'issues.' + issue_id,
+      undefined
+    );
+  },
+
+  /**
+   * _get_cached_issues_ids:
+   *
+   * Full list of IDs for issues in the cache.
+   */
+  _get_cached_issues_ids: function() {
+    return this._get_cached(
+      'issues.list',
+      []
+    );
+  },
+
+  /**
+   * _get_cached_issues:
+   *
+   * All issues in the cache.
+   */
+  _get_cached_issues: function() {
+    var issues = [];
+    var ids    = this._get_cached_issues_ids();
+    for (var i = 0; i < ids.length; i++) {
+      issues[issues.length] = this._get_cached_issue(ids[i]);
+    }
+    return issues;
+  },
+
+  /**
+   * _count_cached_issues:
+   *
+   * A count of all issues in the cache.
+   */
+  _count_cached_issues: function() {
+    return this._get_cached_issues_ids().length;
+  },
+
+  /**
+   * _get_cached_issues_updated:
+   *
+   * Integer representation compatible with Date objects for the last update on
+   * issues in the cache.
+   */
+  _get_cached_issues_updated: function() {
+    var updated = this._get_cached(
+      'issues.updated',
+      undefined
+    );
+    return updated == undefined ? undefined : parseInt(updated);
   },
 
   /**
