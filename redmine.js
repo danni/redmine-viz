@@ -2,7 +2,7 @@
 
 function Redmine (project) {
   this.project = project || REDMINE_PROJECT;
-  this.cache_key = 'rmviz.' + self.project;
+  this.cache_key = 'rmviz.' + this.project;
   
   /* Set the cache object here. Either localStorage or a "fake"
    * cache for compatibility
