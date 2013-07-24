@@ -119,19 +119,39 @@ Redmine.prototype = {
     this.cache[this.cache_key + '.issues.' + issue.id] = JSON.stringify(issue);
 
     /* Update the last updated */
-    var updated = Date.parse(issue.updated_on);
-    var cache_updated = this._get_cached_issues_updated();
-    if (typeof cache_updated == 'undefined') cache_updated = 0;
-    if (updated > cache_updated) {
-      this.cache[this.cache_key + '.issues.updated'] = updated;
-    }
-
+    this._update_last_updated(Date.parse(issue.updated_on));
+    
     /* Update the ids list */
     if (!isset) {
-      var list = this._get_cached_issues_ids();
-      list[list.length] = issue.id;
-      this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
+      this._update_ids_list(issue.id);
     }
+  },
+
+  /**
+   * _update_last_updated:
+   *
+   * Updates the latest cached update date if it's newer. And returns true if
+   * this was a new latest update or false if the cached date was newer.
+   */
+  _update_last_updated: function(updated_on) {
+    var cache_updated = this._get_cached_issues_updated();
+    if (typeof cache_updated == 'undefined') cache_updated = 0;
+    if (updated_on > cache_updated) {
+      this.cache[this.cache_key + '.issues.updated'] = updated_on;
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * _update_ids_list:
+   *
+   * Updates the issues ID list to add the new ID.
+   */
+  _update_ids_list: function(issueId) {
+      var list = this._get_cached_issues_ids();
+      list[list.length] = issueId;
+      this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
   },
 
   /**
