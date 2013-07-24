@@ -42,7 +42,6 @@ Redmine.prototype = {
 
     var self = this;
     var LIMIT = 100;
-    var cache_key = self.cache_key + '.issues';
     var total_read = 0;
 
 
