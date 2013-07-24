@@ -89,7 +89,7 @@ Redmine.prototype = {
       total_read += data.issues.length;
       for (var i = 0; i < data.issues.length; i++) {
         var issue = data.issues[i];
-        self._put_cached_issue(issue.id, issue);
+        self._put_cached_issue(issue);
       }
 
       console.log("Have " + total_read + " new or updated records");
@@ -114,12 +114,12 @@ Redmine.prototype = {
    * Puts an issue into the cache and updates the cache updated value and the
    * IDs list as necessary.
    */
-  _put_cached_issue: function(issue, data) {
-    var isset = typeof this._get_cached_issue(issue) != 'undefined';
-    this.cache[this.cache_key + '.issues.' + issue] = JSON.stringify(data);
+  _put_cached_issue: function(issue) {
+    var isset = typeof this._get_cached_issue(issue.id) != 'undefined';
+    this.cache[this.cache_key + '.issues.' + issue.id] = JSON.stringify(issue);
 
     /* Update the last updated */
-    var updated = Date.parse(data.updated_on);
+    var updated = Date.parse(issue.updated_on);
     var cache_updated = this._get_cached_issues_updated();
     if (typeof cache_updated == 'undefined') cache_updated = 0;
     if (updated > cache_updated) {
@@ -129,7 +129,7 @@ Redmine.prototype = {
     /* Update the ids list */
     if (!isset) {
       var list = this._get_cached_issues_ids();
-      list[list.length] = data.id;
+      list[list.length] = issue.id;
       this.cache[this.cache_key + '.issues.list'] = JSON.stringify(list);
     }
   },
@@ -140,8 +140,8 @@ Redmine.prototype = {
    * Single cached issue by it's issue ID, or undefined if it does not exist in
    * the cache.
    */
-  _get_cached_issue: function(issue) {
-    var data = this.cache[this.cache_key + '.issues.' + issue];
+  _get_cached_issue: function(issueId) {
+    var data = this.cache[this.cache_key + '.issues.' + issueId];
     if (typeof data == 'undefined') return undefined;
     return JSON.parse(data);
   },
@@ -152,9 +152,9 @@ Redmine.prototype = {
    * Full list of IDs for issues in the cache.
    */
   _get_cached_issues_ids: function() {
-    var list = this.cache[this.cache_key + '.issues.list'];
-    if (typeof list == 'undefined') return [];
-    return JSON.parse(list);
+    var data = this.cache[this.cache_key + '.issues.list'];
+    if (typeof data == 'undefined') return [];
+    return JSON.parse(data);
   },
 
   /**
