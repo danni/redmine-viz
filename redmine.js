@@ -93,7 +93,7 @@ Redmine.prototype = {
                  get_all_data);
       } else {
         console.log("Done (" + self._count_cached_issues() + " records total)");
-        callback(self.flatten(self._get_cached_issues()));
+        callback(self.flatten(self._get_cached_issues(status)));
       }
     }
 
@@ -198,12 +198,22 @@ Redmine.prototype = {
    *
    * All issues in the cache.
    */
-  _get_cached_issues: function() {
+  _get_cached_issues: function(status) {
     var issues = [];
-    var ids    = this._get_cached_issues_ids();
+    var ids = this._get_cached_issues_ids();
+
     for (var i = 0; i < ids.length; i++) {
-      issues[issues.length] = this._get_cached_issue(ids[i]);
+      var issue = this._get_cached_issue(ids[i]);
+
+      if (status !== undefined) {
+          if (status != issue.status.id) {
+              continue;
+          }
+      }
+
+      issues.push(issue);
     }
+
     return issues;
   },
 
