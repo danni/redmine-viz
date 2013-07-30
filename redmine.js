@@ -205,7 +205,7 @@ Redmine.prototype = {
     for (var i = 0; i < ids.length; i++) {
       var issue = this._get_cached_issue(ids[i]);
 
-      if (status !== undefined) {
+      if (status !== undefined && status !== '*') {
           if (status != issue.status.id) {
               continue;
           }
