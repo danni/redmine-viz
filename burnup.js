@@ -21,7 +21,7 @@ Burnup.prototype = {
     var width = 1000 - margin.left - margin.right;
     var height = 300 - margin.top - margin.bottom;
 
-    var x = this.x = d3.scale.linear()
+    var x = this.x = d3.scale.ordinal()
         .range([0, width]);
     var y = this.y = d3.scale.linear()
         .range([0, height]);
@@ -32,6 +32,8 @@ Burnup.prototype = {
   },
 
   load: function () {
+    var self = this;
+
     redmine.load_versions(function (versions) {
       redmine.load_issues(function (issues) {
 
@@ -39,6 +41,9 @@ Burnup.prototype = {
         var issues_grouped = d3.nest()
           .key(function(d) { return d.fixed_version })
           .map(issues);
+
+        var cum_total_headaches = 0,
+            cum_complete_headaches = 0;
 
         /* sort the versions */
         versions.forEach(function (version) {
@@ -52,21 +57,20 @@ Burnup.prototype = {
           version.maybe_done_headaches =
               version.maybe_done_issues.reduce(sumHeadaches, 0);
 
-          console.log("Version", version.name,
-                      "Issues", version.issues.length,
-                      "Headaches", version.total_headaches,
-                      "Done", version.done_issues.length,
-                      "Headaches", version.done_headaches,
-                      "UAT", version.maybe_done_issues.length,
-                      "Headaches", version.maybe_done_headaches);
-
           /* save some memory */
           delete version.issues;
           delete version.done_issues;
           delete version.maybe_done_issues;
+
+          /* sum cumulative totals */
+          cum_total_headaches += version.total_headaches;
+          version.cum_total_headaches = cum_total_headaches;
+
+          cum_complete_headaches += version.done_headaches;
+          version.cum_complete_headaches = cum_complete_headaches;
         });
 
-        // FIXME: pass versions here
+        self.visualise(versions);
       }, '*');
     });
   },
@@ -76,6 +80,35 @@ Burnup.prototype = {
     var x = this.x,
         y = this.y,
         svg = this.svg;
+
+    x.domain(data.map(function(v) { return v.name }));
+    y.domain([0,
+              d3.max(data, function(d) { return d.cum_total_headaches })]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient('bottom');
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient('top');
+
+    var line = d3.svg.line()
+        .x(function(d) { return x(d.name) })
+        .y(function(d) { return y(d.cum_total_headaches) });
+
+    svg.append('g')
+        .attr('class', 'x axis')
+        .call(xAxis);
+
+    svg.append('g')
+        .attr('class', 'y axis')
+        .call(yAxis);
+
+    // svg.append('path')
+    //     .datum(data)
+    //     .attr('class', 'line')
+    //     .attr('d', line);
   }
 
 }
