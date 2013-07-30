@@ -29,27 +29,6 @@ Burnup.prototype = {
     var svg = this.svg = d3.select('body').append('svg')
       .append('g')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-    /* specify the domain of the axes */
-    // FIXME: x domain is hard coded
-/*
-    x.domain([0, 30]);
-    y.domain(FILTER_STATUSES);
-*/
-
-/*
-    this.labels = svg.append('g')
-        .attr('class', 'labels')
-      .selectAll('text')
-        .data(y.domain())
-      .enter().append('text')
-        .attr('class', 'label')
-        .attr('x', -6)
-        .attr('y', function(d) { return y(d) + y.rangeBand() / 2; })
-        .text(function (d) { return d })
-      .transition().duration(750)
-        .attr('opacity', 1);
-*/
   },
 
   load: function () {
@@ -61,14 +40,33 @@ Burnup.prototype = {
           .key(function(d) { return d.fixed_version })
           .map(issues);
 
-        console.log(issues);
-
         /* sort the versions */
         versions.forEach(function (version) {
-          version.issues = issues_grouped[version.name];
+          version.issues = issues_grouped[version.name] || [];
+          version.total_headaches = version.issues.reduce(sumHeadaches, 0);
+
+          version.done_issues = version.issues.filter(doneIssues);
+          version.done_headaches = version.done_issues.reduce(sumHeadaches, 0);
+
+          version.maybe_done_issues = version.issues.filter(maybeDoneIssues);
+          version.maybe_done_headaches =
+              version.maybe_done_issues.reduce(sumHeadaches, 0);
+
+          console.log("Version", version.name,
+                      "Issues", version.issues.length,
+                      "Headaches", version.total_headaches,
+                      "Done", version.done_issues.length,
+                      "Headaches", version.done_headaches,
+                      "UAT", version.maybe_done_issues.length,
+                      "Headaches", version.maybe_done_headaches);
+
+          /* save some memory */
+          delete version.issues;
+          delete version.done_issues;
+          delete version.maybe_done_issues;
         });
 
-        console.log(versions[0]);
+        // FIXME: pass versions here
       }, '*');
     });
   },
@@ -84,4 +82,16 @@ Burnup.prototype = {
 
 function cleanup (name) {
   return name.replace(/[^A-Za-z0-9]+/g, '_');
+}
+
+function sumHeadaches (val1, val2) {
+    return val1 + (+val2.headaches || 0);
+}
+
+function doneIssues (issue) {
+    return ['Closed', 'Resolved', 'Acceptance Test Passed'].indexOf(issue.status) != -1;
+}
+
+function maybeDoneIssues (issue) {
+    return ['Acceptance Test'].indexOf(issue.status) != -1;
 }
