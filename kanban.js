@@ -76,15 +76,18 @@ Kanban.prototype = {
 
     data.forEach(function(k, v) {
 
+      var y = y0 + v.length;
+
       out[k] = {
         project: k,
         status: v[0].status,
         tickets: v,
         y0: y0,
-        y: y0 + v.length
+        y: y
       };
 
-      y0 = out[k].y;
+
+      y0 = y;
     });
 
     /* flatten the data */
