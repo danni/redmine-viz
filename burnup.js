@@ -93,14 +93,26 @@ Burnup.prototype = {
         var format = d3.time.format('%Y-%m-%d'),
             start_date = undefined;
 
+        function parse_date(v) {
+            if (v.due_date === undefined) {
+                /* make a date 1 year in the future */
+                v.due_date = d3.time.year.offset(new Date(), 1);
+            } else if (!(v.due_date instanceof Date)) {
+                v.due_date = format.parse(v.due_date);
+            }
+
+            return v.due_date;
+        }
+
         versions.sort(function(a, b) {
-            return d3.ascending(format.parse(a.due_date),
-                                format.parse(b.due_date));
+            parse_date(a);
+            parse_date(b);
+
+            return d3.ascending(a.due_date, b.due_date);
         });
         versions.forEach(function (version) {
+          parse_date(version);
           version.start_date = start_date;
-          version.due_date = format.parse(version.due_date);
-
           start_date = version.due_date;
 
           version.issues = issues_grouped[version.name] || [];
