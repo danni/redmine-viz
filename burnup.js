@@ -127,6 +127,12 @@ Burnup.prototype = {
           }
         });
 
+        /* remove any versions off the front with 0 headaches,
+         * these screw up our regressions */
+        versions = versions.filter(function(v) {
+            return v.cum_total_headaches > 0;
+        })
+
         self.visualise(versions);
       }, '*');
     });
