@@ -145,11 +145,20 @@ Burnup.prototype = {
     svg.append('g')
         .attr('class', 'x axis')
         .attr('transform', 'translate(0,' + height + ')')
-        .call(xAxis);
+        .call(xAxis)
+      .append('text')
+        .attr('x', width / 2)
+        .attr('y', 40)
+        .text("Iteration");
 
     svg.append('g')
         .attr('class', 'y axis')
-        .call(yAxis);
+        .call(yAxis)
+      .append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 6)
+        .attr('dy', '.71em')
+        .text("Headaches");
 
     svg.append('path')
         .datum(data)
