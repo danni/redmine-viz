@@ -51,11 +51,31 @@ svg {
     }
   }
 
-  text.label {
+  .axis {
+    path, line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+  }
+
+  text {
     font-family: 'Roboto Condensed', sans-serif;
     font-weight: 300;
     font-size: 12pt;
+  }
+
+  text.label,
+  .y.axis text {
     text-anchor: end;
     alignment-baseline: middle;
+  }
+
+  .line {
+    fill: none;
+
+    &.total {
+      stroke: black;
+    }
   }
 }

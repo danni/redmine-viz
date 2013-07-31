@@ -16,19 +16,32 @@ Burnup.prototype = {
       top: 10,
       right: 10,
       bottom: 10,
-      left: 10
+      left: 50
     };
-    var width = 1000 - margin.left - margin.right;
-    var height = 300 - margin.top - margin.bottom;
+    var width = this.width = 1000 - margin.left - margin.right;
+    var height = this.height = 300 - margin.top - margin.bottom;
 
     var x = this.x = d3.scale.ordinal()
-        .range([0, width]);
+        .rangePoints([0, width]);
     var y = this.y = d3.scale.linear()
-        .range([0, height]);
+        .range([height, 0]);
 
     var svg = this.svg = d3.select('body').append('svg')
       .append('g')
+        .attr('class', 'burnup')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+    
+    var xAxis = this.xAxis = d3.svg.axis()
+        .scale(x)
+        .orient('bottom');
+
+    var yAxis = this.yAxis = d3.svg.axis()
+        .scale(y)
+        .orient('left');
+
+    var line = this.line = d3.svg.line()
+        .x(function(d) { return x(d.name) })
+        .y(function(d) { return y(d.cum_total_headaches) });
   },
 
   load: function () {
@@ -46,6 +59,12 @@ Burnup.prototype = {
             cum_complete_headaches = 0;
 
         /* sort the versions */
+        var format = d3.time.format('%Y-%m-%d');
+
+        versions.sort(function(a, b) {
+            return d3.ascending(format.parse(a.due_date),
+                                format.parse(b.due_date));
+        });
         versions.forEach(function (version) {
           version.issues = issues_grouped[version.name] || [];
           version.total_headaches = version.issues.reduce(sumHeadaches, 0);
@@ -79,36 +98,31 @@ Burnup.prototype = {
 
     var x = this.x,
         y = this.y,
-        svg = this.svg;
+        svg = this.svg,
+        xAxis = this.xAxis,
+        yAxis = this.yAxis,
+        width = this.width,
+        height = this.height,
+        line = this.line;
 
     x.domain(data.map(function(v) { return v.name }));
     y.domain([0,
               d3.max(data, function(d) { return d.cum_total_headaches })]);
-
-    var xAxis = d3.svg.axis()
-        .scale(x)
-        .orient('bottom');
-
-    var yAxis = d3.svg.axis()
-        .scale(y)
-        .orient('top');
-
-    var line = d3.svg.line()
-        .x(function(d) { return x(d.name) })
-        .y(function(d) { return y(d.cum_total_headaches) });
+    console.log('data', d3.max(data, function(d) { return d.cum_total_headaches }));
 
     svg.append('g')
         .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + height + ')')
         .call(xAxis);
 
     svg.append('g')
         .attr('class', 'y axis')
         .call(yAxis);
 
-    // svg.append('path')
-    //     .datum(data)
-    //     .attr('class', 'line')
-    //     .attr('d', line);
+    svg.append('path')
+        .datum(data)
+        .attr('class', 'total line')
+        .attr('d', line);
   }
 
 }
