@@ -39,9 +39,13 @@ Burnup.prototype = {
         .scale(y)
         .orient('left');
 
-    var line = this.line = d3.svg.line()
+    var total = this.total = d3.svg.line()
         .x(function(d) { return x(d.name) })
         .y(function(d) { return y(d.cum_total_headaches) });
+
+    var burnup = this.burnup = d3.svg.line()
+        .x(function(d) { return x(d.name) })
+        .y(function(d) { return y(d.cum_complete_headaches) });
   },
 
   load: function () {
@@ -60,12 +64,16 @@ Burnup.prototype = {
 
         /* sort the versions */
         var format = d3.time.format('%Y-%m-%d');
+        var today = new Date();
+        today.setDate(today.getDate() + 14); /* include this iteration */
 
         versions.sort(function(a, b) {
             return d3.ascending(format.parse(a.due_date),
                                 format.parse(b.due_date));
         });
         versions.forEach(function (version) {
+          version.due_date = format.parse(version.due_date);
+
           version.issues = issues_grouped[version.name] || [];
           version.total_headaches = version.issues.reduce(sumHeadaches, 0);
 
@@ -86,7 +94,10 @@ Burnup.prototype = {
           version.cum_total_headaches = cum_total_headaches;
 
           cum_complete_headaches += version.done_headaches;
-          version.cum_complete_headaches = cum_complete_headaches;
+
+          if (today >= version.due_date) {
+            version.cum_complete_headaches = cum_complete_headaches;
+          }
         });
 
         self.visualise(versions);
@@ -103,7 +114,8 @@ Burnup.prototype = {
         yAxis = this.yAxis,
         width = this.width,
         height = this.height,
-        line = this.line;
+        total = this.total,
+        burnup = this.burnup;
 
     x.domain(data.map(function(v) { return v.name }));
     y.domain([0,
@@ -122,7 +134,12 @@ Burnup.prototype = {
     svg.append('path')
         .datum(data)
         .attr('class', 'total line')
-        .attr('d', line);
+        .attr('d', total);
+
+    svg.append('path')
+        .datum(data)
+        .attr('class', 'burnup line')
+        .attr('d', burnup);
   }
 
 }
