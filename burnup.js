@@ -43,9 +43,17 @@ Burnup.prototype = {
         .x(function(d) { return x(d.name) })
         .y(function(d) { return y(d.cum_total_headaches) });
 
-    var burnup = this.burnup = d3.svg.line()
+    var burnup_done = this.burnup_done = d3.svg.area()
         .x(function(d) { return x(d.name) })
-        .y(function(d) { return y(d.cum_complete_headaches) });
+        .y0(function(d) { return y(0) })
+        .y1(function(d) { return y(d.cum_complete_headaches) });
+
+    var burnup_at = this.burnup_at = d3.svg.area()
+        .x(function(d) { return x(d.name) })
+        .y0(function(d) { return y(d.cum_complete_headaches) })
+        .y1(function(d) {
+            return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
+        });
   },
 
   load: function () {
@@ -60,7 +68,8 @@ Burnup.prototype = {
           .map(issues);
 
         var cum_total_headaches = 0,
-            cum_complete_headaches = 0;
+            cum_complete_headaches = 0,
+            cum_maybe_done_headaches = 0;
 
         /* sort the versions */
         var format = d3.time.format('%Y-%m-%d');
@@ -94,9 +103,11 @@ Burnup.prototype = {
           version.cum_total_headaches = cum_total_headaches;
 
           cum_complete_headaches += version.done_headaches;
+          cum_maybe_done_headaches += version.maybe_done_headaches;
 
           if (today >= version.due_date) {
             version.cum_complete_headaches = cum_complete_headaches;
+            version.cum_maybe_done_headaches = cum_maybe_done_headaches;
           }
         });
 
@@ -113,14 +124,11 @@ Burnup.prototype = {
         xAxis = this.xAxis,
         yAxis = this.yAxis,
         width = this.width,
-        height = this.height,
-        total = this.total,
-        burnup = this.burnup;
+        height = this.height;
 
     x.domain(data.map(function(v) { return v.name }));
     y.domain([0,
               d3.max(data, function(d) { return d.cum_total_headaches })]);
-    console.log('data', d3.max(data, function(d) { return d.cum_total_headaches }));
 
     svg.append('g')
         .attr('class', 'x axis')
@@ -134,12 +142,17 @@ Burnup.prototype = {
     svg.append('path')
         .datum(data)
         .attr('class', 'total line')
-        .attr('d', total);
+        .attr('d', this.total);
 
     svg.append('path')
-        .datum(data)
-        .attr('class', 'burnup line')
-        .attr('d', burnup);
+        .datum(data.filter(completedIterations))
+        .attr('class', 'burnup area done')
+        .attr('d', this.burnup_done);
+
+    svg.append('path')
+        .datum(data.filter(completedIterations))
+        .attr('class', 'burnup area AT')
+        .attr('d', this.burnup_at);
   }
 
 }
@@ -158,4 +171,8 @@ function doneIssues (issue) {
 
 function maybeDoneIssues (issue) {
     return ['Acceptance Test'].indexOf(issue.status) != -1;
+}
+
+function completedIterations (version) {
+    return (version.cum_complete_headaches !== undefined);
 }

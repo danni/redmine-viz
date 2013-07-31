@@ -79,8 +79,21 @@ svg {
       stroke: black;
     }
 
+  }
+
+  .area {
     &.burnup {
-      stroke: blue;
+        &.AT {
+            .set_colour(#00A000);
+        }
+
+        &.done {
+            .set_colour(steelblue);
+        }
+
+        &.failed {
+            .set_color(#F04040);
+        }
     }
   }
 }
