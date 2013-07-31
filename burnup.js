@@ -228,6 +228,7 @@ Burnup.prototype = {
         .call(yAxis)
       .append('text')
         .attr('transform', 'rotate(-90)')
+        .attr('x', -10)
         .attr('y', 6)
         .attr('dy', '.71em')
         .text("Headaches");
@@ -282,7 +283,7 @@ Burnup.prototype = {
     var last_version = data[data.length-1];
     svg.append('text')
         .attr('class', 'burnup scope marker')
-        .attr('x', x(last_version.start_date))
+        .attr('x', x(last_version.due_date))
         .attr('y', y(last_version.cum_total_headaches))
         .attr('dx', '.3em')
         .attr('dy', '.3em')
