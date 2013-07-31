@@ -341,10 +341,14 @@ Burnup.prototype = {
           }))
           .line();
 
+      /* calculate the iteration velocity */
+      var next_date = d3.time.week.offset(start_date, 2),
+          velocity = lin(x(next_date)) - lin(x(start_date));
+      console.log("Velocity (per 14 day iteration):", velocity);
+
       var a = [{ x: x(start_date), y: y(lin(x(start_date))) },
                { x: x(end_date), y: y(lin(x(end_date))) }];
-    console.log(a);
-    return a;
+      return a;
   }
 }
 
