@@ -112,11 +112,11 @@ Burnup.prototype = {
           cum_total_headaches += version.total_headaches;
           version.cum_total_headaches = cum_total_headaches;
 
-          cum_complete_headaches += version.done_headaches;
-          cum_maybe_done_headaches += version.maybe_done_headaches;
-          cum_failed_at_headaches += version.failed_at_headaches;
-
           if (today >= version.due_date) {
+            cum_complete_headaches += version.done_headaches;
+            cum_maybe_done_headaches += version.maybe_done_headaches;
+            cum_failed_at_headaches += version.failed_at_headaches;
+
             version.cum_complete_headaches = cum_complete_headaches;
             version.cum_maybe_done_headaches = cum_maybe_done_headaches;
             version.cum_failed_at_headaches = cum_failed_at_headaches;
@@ -180,6 +180,15 @@ Burnup.prototype = {
         .datum(data.filter(completedIterations))
         .attr('class', 'burnup area failed')
         .attr('d', this.burnup_failing);
+
+    var last_version = data[data.length-1];
+    svg.append('text')
+        .attr('class', 'scope marker')
+        .attr('x', x(last_version.name))
+        .attr('y', y(last_version.cum_total_headaches))
+        .attr('dx', '.3em')
+        .attr('dy', '.3em')
+        .text("Scope");
   }
 
 }
