@@ -71,9 +71,9 @@ Burnup.prototype = {
     //                  d.cum_failed_at_headaches)
     //     });
 
-    // var regression = this.regression = d3.svg.line()
-    //     .x(function(d) { return d.x })
-    //     .y(function(d) { return d.y });
+    var regression = this.regression = d3.svg.line()
+        .x(function(d) { return d.x })
+        .y(function(d) { return d.y });
   },
 
   load: function () {
@@ -119,6 +119,9 @@ Burnup.prototype = {
         versions = versions.filter(function(v) {
             return v.cum_total_headaches > 0;
         })
+
+        self.first_date = versions[0].start_date;
+        self.last_date = versions[versions.length-1].due_date;
 
         /* group the issues by date closed, then apply a rollup to count
          * the number of headaches closed on each date */
@@ -230,31 +233,6 @@ Burnup.prototype = {
     //     .attr('d', this.burnup_failing);
 
     // /* compute regressions */
-    // function compute_regression(datain, key) {
-    //     var lin = ss.linear_regression()
-    //         .data(datain.map(function(d) {
-    //             return [x(d.name), key(d)]
-    //         }))
-    //         .line();
-    //     var out = data.map(function(d) {
-    //         var x0 = x(d.name);
-
-    //         return {
-    //             x: x0,
-    //             y: y(lin(x0))
-    //         }
-    //     });
-
-    //     return out;
-    // }
-
-    // /* completed work */
-    // var regr = compute_regression(data_so_far,
-    //         function(d) { return d.cum_complete_headaches });
-    // svg.append('path')
-    //     .datum(regr)
-    //     .attr('class', 'burnup regression done')
-    //     .attr('d', this.regression);
 
     // /* AT work */
     // var regr = compute_regression(data_so_far, function(d) {
@@ -299,13 +277,6 @@ Burnup.prototype = {
         .text("Scope");
 
     // var last_version = data_so_far[data_so_far.length-1];
-    // svg.append('text')
-    //     .attr('class', 'burnup done marker')
-    //     .attr('x', x(last_version.name))
-    //     .attr('y', y(last_version.cum_complete_headaches))
-    //     .attr('dx', '.3em')
-    //     .attr('dy', '.3em')
-    //     .text("Completed");
     // 
     // svg.append('text')
     //     .attr('class', 'burnup AT marker')
@@ -333,11 +304,47 @@ Burnup.prototype = {
         yAxis = this.yAxis,
         width = this.width,
         height = this.height;
+    
+    var last = data[data.length-1];
 
+    /* plot the burnup */
     svg.append('path')
         .datum(data)
         .attr('class', 'burnup area done')
         .attr('d', this.burnup_done);
+
+    /* label the burnup */
+    svg.append('text')
+        .attr('class', 'burnup done marker')
+        .attr('x', x(last.date))
+        .attr('y', y(last.cum_headaches))
+        .attr('dx', '.3em')
+        .attr('dy', '.3em')
+        .text("Completed");
+
+    svg.append('path')
+        .datum(this.compute_regression(data,
+                                       function(d) { return d.cum_headaches }))
+        .attr('class', 'burnup regression done')
+        .attr('d', this.regression);
+  },
+
+  compute_regression: function (datain, key) {
+      var x = this.x,
+          y = this.y,
+          start_date = this.first_date,
+          end_date = this.last_date;
+
+      var lin = ss.linear_regression()
+          .data(datain.map(function(d) {
+              return [x(d.date), key(d)]
+          }))
+          .line();
+
+      var a = [{ x: x(start_date), y: y(lin(x(start_date))) },
+               { x: x(end_date), y: y(lin(x(end_date))) }];
+    console.log(a);
+    return a;
   }
 }
 
