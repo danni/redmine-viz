@@ -43,10 +43,10 @@ Burnup.prototype = {
         .x(function(d) { return x(d.start_date) })
         .y(function(d) { return y(d.cum_total_headaches) });
 
-    // var burnup_done = this.burnup_done = d3.svg.area()
-    //     .x(function(d) { return x(d.name) })
-    //     .y0(function(d) { return y(0) })
-    //     .y1(function(d) { return y(d.cum_complete_headaches) });
+    var burnup_done = this.burnup_done = d3.svg.area()
+        .x(function(d) { return x(d.date) })
+        .y0(function(d) { return y(0) })
+        .y1(function(d) { return y(d.cum_headaches) });
 
     // var burnup_at = this.burnup_at = d3.svg.area()
     //     .x(function(d) { return x(d.name) })
@@ -82,16 +82,11 @@ Burnup.prototype = {
           .key(function(d) { return d.fixed_version })
           .map(issues);
 
-        var cum_total_headaches = 0,
-            cum_complete_headaches = 0,
-            cum_maybe_done_headaches = 0,
-            cum_failed_at_headaches = 0;
+        var cum_total_headaches = 0;
 
         /* sort the versions */
         var format = d3.time.format('%Y-%m-%d'),
-            start_date = undefined,
-            today = new Date();
-        today.setDate(today.getDate() + 14); /* include this iteration */
+            start_date = undefined;
 
         versions.sort(function(a, b) {
             return d3.ascending(format.parse(a.due_date),
@@ -106,29 +101,12 @@ Burnup.prototype = {
           version.issues = issues_grouped[version.name] || [];
           version.total_headaches = version.issues.reduce(sumHeadaches, 0);
 
-          version.done_headaches = version.issues.filter(doneIssues)
-                                                 .reduce(sumHeadaches, 0);
-          version.maybe_done_headaches = version.issues.filter(maybeDoneIssues)
-                                                       .reduce(sumHeadaches, 0);
-          version.failed_at_headaches = version.issues.filter(failedATissues)
-                                                      .reduce(sumHeadaches, 0);
-
           /* save some memory */
           delete version.issues;
 
           /* sum cumulative totals */
           cum_total_headaches += version.total_headaches;
           version.cum_total_headaches = cum_total_headaches;
-
-          if (today >= version.due_date) {
-            cum_complete_headaches += version.done_headaches;
-            cum_maybe_done_headaches += version.maybe_done_headaches;
-            cum_failed_at_headaches += version.failed_at_headaches;
-
-            version.cum_complete_headaches = cum_complete_headaches;
-            version.cum_maybe_done_headaches = cum_maybe_done_headaches;
-            version.cum_failed_at_headaches = cum_failed_at_headaches;
-          }
         });
 
         /* remove any versions off the front with 0 headaches,
@@ -137,12 +115,47 @@ Burnup.prototype = {
             return v.cum_total_headaches > 0;
         })
 
-        self.visualise(versions);
+        /* group the issues by date closed, then apply a rollup to count
+         * the number of headaches closed on each date */
+        var format = d3.time.format.iso;
+        var issues_grouped = d3.nest()
+            .key(function(d) {
+                d.closed_date = d3.time.day.floor(format.parse(d.closed_on));
+                return d.closed_date;
+            })
+            .rollup(function(leaves) {
+                return {
+                    date: leaves[0].closed_date,
+                    headaches: leaves.reduce(sumHeadaches, 0)
+                }
+            })
+            .map(issues.filter(issueClosed), d3.map)
+            .values()
+            .sort(function(d1, d2) {
+                return d3.ascending(d1.date, d2.date);
+            }).filter(function(d) {
+                return d.headaches > 0;
+            });
+
+        var cum_complete_headaches = 0;
+        issues_grouped.forEach(function(d) {
+            d.cum_headaches =
+                cum_complete_headaches += d.headaches;
+        });
+
+        /* add today */
+        issues_grouped.push({
+            date: new Date(),
+            cum_headaches: cum_complete_headaches
+        });
+
+        self.visualise_iterations(versions);
+        self.visualise_burnup(issues_grouped);
       }, '*');
     });
   },
 
-  visualise: function (data) {
+  visualise_iterations: function (data) {
 
     var x = this.x,
         y = this.y,
@@ -188,11 +201,6 @@ Burnup.prototype = {
         .attr('class', 'x axis')
         .attr('transform', 'translate(0,' + height + ')')
         .call(xAxis)
-    //  .append('text')
-    //    .attr('class', 'label')
-    //    .attr('x', width / 2)
-    //    .attr('y', 40)
-    //    .text("Iteration");
 
     /* y axis */
     svg.append('g')
@@ -205,11 +213,6 @@ Burnup.prototype = {
         .text("Headaches");
 
     // var data_so_far = data.filter(completedIterations);
-
-    // svg.append('path')
-    //     .datum(data_so_far)
-    //     .attr('class', 'burnup area done')
-    //     .attr('d', this.burnup_done);
 
     // svg.append('path')
     //     .datum(data_so_far)
@@ -278,7 +281,7 @@ Burnup.prototype = {
     var last_version = data[data.length-1];
     svg.append('text')
         .attr('class', 'burnup scope marker')
-        .attr('x', x(last_version.due_date))
+        .attr('x', x(last_version.start_date))
         .attr('y', y(last_version.cum_total_headaches))
         .attr('dx', '.3em')
         .attr('dy', '.3em')
@@ -308,8 +311,23 @@ Burnup.prototype = {
     //     .attr('dx', '.3em')
     //     .attr('dy', '.3em')
     //     .text("Failed AT");
-  }
+  },
 
+  visualise_burnup: function (data) {
+
+    var x = this.x,
+        y = this.y,
+        svg = this.svg,
+        xAxis = this.xAxis,
+        yAxis = this.yAxis,
+        width = this.width,
+        height = this.height;
+
+    svg.append('path')
+        .datum(data)
+        .attr('class', 'burnup area done')
+        .attr('d', this.burnup_done);
+  }
 }
 
 function cleanup (name) {
@@ -320,11 +338,8 @@ function sumHeadaches (val1, val2) {
     return val1 + (+val2.headaches || 0);
 }
 
-function doneIssues (issue) {
-    return ['Closed',
-            'Resolved',
-            'Acceptance Test Passed'
-           ].indexOf(issue.status) != -1;
+function issueClosed (issue) {
+    return issue.closed_on !== undefined;
 }
 
 function failedATissues (issue) {
@@ -333,8 +348,4 @@ function failedATissues (issue) {
 
 function maybeDoneIssues (issue) {
     return ['Acceptance Test'].indexOf(issue.status) != -1;
-}
-
-function completedIterations (version) {
-    return (version.cum_complete_headaches !== undefined);
 }
