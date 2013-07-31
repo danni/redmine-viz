@@ -39,10 +39,15 @@ Burnup.prototype = {
         .scale(y)
         .orient('left');
 
+    /* the total scope:
+     * the line rises over the iteration from the value at the end of the
+     * last iteration to the final value it should be at the end of the
+     * iteration */
     var total = this.total = d3.svg.line()
-        .x(function(d) { return x(d.start_date) })
+        .x(function(d) { return x(d.due_date) })
         .y(function(d) { return y(d.cum_total_headaches) });
 
+    /* the cumulative burnup */
     var burnup_done = this.burnup_done = d3.svg.area()
         .x(function(d) { return x(d.date) })
         .y0(function(d) { return y(0) })
@@ -270,6 +275,12 @@ Burnup.prototype = {
     //     .datum(regr)
     //     .attr('class', 'burnup regression failed')
     //     .attr('d', this.regression);
+
+    /* append a 0 value */
+    data.unshift({
+        due_date: data[0].start_date,
+        cum_total_headaches: 0
+    });
 
     /* the scope */
     svg.append('path')
