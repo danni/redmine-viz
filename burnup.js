@@ -243,12 +243,37 @@ Burnup.prototype = {
     /* labels */
     var last_version = data[data.length-1];
     svg.append('text')
-        .attr('class', 'scope marker')
+        .attr('class', 'burnup scope marker')
         .attr('x', x(last_version.name))
         .attr('y', y(last_version.cum_total_headaches))
         .attr('dx', '.3em')
         .attr('dy', '.3em')
         .text("Scope");
+
+    var last_version = data_so_far[data_so_far.length-1];
+    svg.append('text')
+        .attr('class', 'burnup done marker')
+        .attr('x', x(last_version.name))
+        .attr('y', y(last_version.cum_complete_headaches))
+        .attr('dx', '.3em')
+        .attr('dy', '.3em')
+        .text("Completed");
+    
+    svg.append('text')
+        .attr('class', 'burnup AT marker')
+        .attr('x', x(last_version.name))
+        .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches))
+        .attr('dx', '.3em')
+        .attr('dy', '.3em')
+        .text("Awaiting AT");
+    
+    svg.append('text')
+        .attr('class', 'burnup failed marker')
+        .attr('x', x(last_version.name))
+        .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches + last_version.cum_failed_at_headaches))
+        .attr('dx', '.3em')
+        .attr('dy', '.3em')
+        .text("Failed AT");
     
   }
 
