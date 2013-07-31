@@ -21,8 +21,8 @@ Burnup.prototype = {
     var width = this.width = window.innerWidth - margin.left - margin.right;
     var height = this.height = window.innerHeight - margin.top - margin.bottom;
 
-    var x = this.x = d3.scale.ordinal()
-        .rangePoints([0, width]);
+    var x = this.x = d3.time.scale()
+        .range([0, width]);
     var y = this.y = d3.scale.linear()
         .range([height, 0]);
 
@@ -40,35 +40,35 @@ Burnup.prototype = {
         .orient('left');
 
     var total = this.total = d3.svg.line()
-        .x(function(d) { return x(d.name) })
+        .x(function(d) { return x(d.start_date) })
         .y(function(d) { return y(d.cum_total_headaches) });
 
-    var burnup_done = this.burnup_done = d3.svg.area()
-        .x(function(d) { return x(d.name) })
-        .y0(function(d) { return y(0) })
-        .y1(function(d) { return y(d.cum_complete_headaches) });
+    // var burnup_done = this.burnup_done = d3.svg.area()
+    //     .x(function(d) { return x(d.name) })
+    //     .y0(function(d) { return y(0) })
+    //     .y1(function(d) { return y(d.cum_complete_headaches) });
 
-    var burnup_at = this.burnup_at = d3.svg.area()
-        .x(function(d) { return x(d.name) })
-        .y0(function(d) { return y(d.cum_complete_headaches) })
-        .y1(function(d) {
-            return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
-        });
+    // var burnup_at = this.burnup_at = d3.svg.area()
+    //     .x(function(d) { return x(d.name) })
+    //     .y0(function(d) { return y(d.cum_complete_headaches) })
+    //     .y1(function(d) {
+    //         return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
+    //     });
 
-    var burnup_failing = this.burnup_failing = d3.svg.area()
-        .x(function(d) { return x(d.name) })
-        .y0(function(d) {
-            return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
-        })
-        .y1(function(d) {
-            return y(d.cum_complete_headaches +
-                     d.cum_maybe_done_headaches +
-                     d.cum_failed_at_headaches)
-        });
+    // var burnup_failing = this.burnup_failing = d3.svg.area()
+    //     .x(function(d) { return x(d.name) })
+    //     .y0(function(d) {
+    //         return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
+    //     })
+    //     .y1(function(d) {
+    //         return y(d.cum_complete_headaches +
+    //                  d.cum_maybe_done_headaches +
+    //                  d.cum_failed_at_headaches)
+    //     });
 
-    var regression = this.regression = d3.svg.line()
-        .x(function(d) { return d.x })
-        .y(function(d) { return d.y });
+    // var regression = this.regression = d3.svg.line()
+    //     .x(function(d) { return d.x })
+    //     .y(function(d) { return d.y });
   },
 
   load: function () {
@@ -88,8 +88,9 @@ Burnup.prototype = {
             cum_failed_at_headaches = 0;
 
         /* sort the versions */
-        var format = d3.time.format('%Y-%m-%d');
-        var today = new Date();
+        var format = d3.time.format('%Y-%m-%d'),
+            start_date = undefined,
+            today = new Date();
         today.setDate(today.getDate() + 14); /* include this iteration */
 
         versions.sort(function(a, b) {
@@ -97,7 +98,10 @@ Burnup.prototype = {
                                 format.parse(b.due_date));
         });
         versions.forEach(function (version) {
+          version.start_date = start_date;
           version.due_date = format.parse(version.due_date);
+
+          start_date = version.due_date;
 
           version.issues = issues_grouped[version.name] || [];
           version.total_headaches = version.issues.reduce(sumHeadaches, 0);
@@ -148,20 +152,49 @@ Burnup.prototype = {
         width = this.width,
         height = this.height;
 
-    x.domain(data.map(function(v) { return v.name }));
+    x.domain([data[0].start_date,
+              data[data.length-1].due_date]);
     y.domain([0,
               d3.max(data, function(d) { return d.cum_total_headaches })]);
 
+    /* colour the iterations */
+    svg.append('g')
+        .attr('class', 'iterations')
+      .selectAll('rect')
+        .data(data)
+        .enter().append('rect')
+          .attr('class', 'iteration')
+          .attr('x', function(d) {
+              return x(d.start_date);
+          })
+          .attr('y', 0)
+          .attr('width', function(d) {
+              return x(d.due_date) - x(d.start_date);
+          })
+          .attr('height', y(0))
+    svg.select('g.iterations')
+        .selectAll('text')
+        .data(data)
+        .enter().append('text')
+          .attr('x', function(d) {
+              return (x(d.due_date) + x(d.start_date)) / 2
+          })
+          .attr('y', 0)
+          .attr('dy', -3)
+          .text(function(d) { return d.name });
+
+    /* x axis */
     svg.append('g')
         .attr('class', 'x axis')
         .attr('transform', 'translate(0,' + height + ')')
         .call(xAxis)
-      .append('text')
-        .attr('class', 'label')
-        .attr('x', width / 2)
-        .attr('y', 40)
-        .text("Iteration");
+    //  .append('text')
+    //    .attr('class', 'label')
+    //    .attr('x', width / 2)
+    //    .attr('y', 40)
+    //    .text("Iteration");
 
+    /* y axis */
     svg.append('g')
         .attr('class', 'y axis')
         .call(yAxis)
@@ -171,70 +204,71 @@ Burnup.prototype = {
         .attr('dy', '.71em')
         .text("Headaches");
 
-    var data_so_far = data.filter(completedIterations);
+    // var data_so_far = data.filter(completedIterations);
 
-    svg.append('path')
-        .datum(data_so_far)
-        .attr('class', 'burnup area done')
-        .attr('d', this.burnup_done);
+    // svg.append('path')
+    //     .datum(data_so_far)
+    //     .attr('class', 'burnup area done')
+    //     .attr('d', this.burnup_done);
 
-    svg.append('path')
-        .datum(data_so_far)
-        .attr('class', 'burnup area AT')
-        .attr('d', this.burnup_at);
-    
-    svg.append('path')
-        .datum(data_so_far)
-        .attr('class', 'burnup area failed')
-        .attr('d', this.burnup_failing);
+    // svg.append('path')
+    //     .datum(data_so_far)
+    //     .attr('class', 'burnup area AT')
+    //     .attr('d', this.burnup_at);
+    // 
+    // svg.append('path')
+    //     .datum(data_so_far)
+    //     .attr('class', 'burnup area failed')
+    //     .attr('d', this.burnup_failing);
 
-    /* compute regressions */
-    function compute_regression(datain, key) {
-        var lin = ss.linear_regression()
-            .data(datain.map(function(d) {
-                return [x(d.name), key(d)]
-            }))
-            .line();
-        var out = data.map(function(d) {
-            var x0 = x(d.name);
+    // /* compute regressions */
+    // function compute_regression(datain, key) {
+    //     var lin = ss.linear_regression()
+    //         .data(datain.map(function(d) {
+    //             return [x(d.name), key(d)]
+    //         }))
+    //         .line();
+    //     var out = data.map(function(d) {
+    //         var x0 = x(d.name);
 
-            return {
-                x: x0,
-                y: y(lin(x0))
-            }
-        });
+    //         return {
+    //             x: x0,
+    //             y: y(lin(x0))
+    //         }
+    //     });
 
-        return out;
-    }
+    //     return out;
+    // }
 
-    /* completed work */
-    var regr = compute_regression(data_so_far,
-            function(d) { return d.cum_complete_headaches });
-    svg.append('path')
-        .datum(regr)
-        .attr('class', 'burnup regression done')
-        .attr('d', this.regression);
+    // /* completed work */
+    // var regr = compute_regression(data_so_far,
+    //         function(d) { return d.cum_complete_headaches });
+    // svg.append('path')
+    //     .datum(regr)
+    //     .attr('class', 'burnup regression done')
+    //     .attr('d', this.regression);
 
-    /* AT work */
-    var regr = compute_regression(data_so_far, function(d) {
-        return d.cum_complete_headaches + d.cum_maybe_done_headaches;
-    });
-    svg.append('path')
-        .datum(regr)
-        .attr('class', 'burnup regression AT')
-        .attr('d', this.regression);
-    
-    /* Failed work */
-    var regr = compute_regression(data_so_far, function(d) {
-        return d.cum_complete_headaches +
-               d.cum_maybe_done_headaches +
-               d.cum_failed_at_headaches;
-    });
-    svg.append('path')
-        .datum(regr)
-        .attr('class', 'burnup regression failed')
-        .attr('d', this.regression);
+    // /* AT work */
+    // var regr = compute_regression(data_so_far, function(d) {
+    //     return d.cum_complete_headaches + d.cum_maybe_done_headaches;
+    // });
+    // svg.append('path')
+    //     .datum(regr)
+    //     .attr('class', 'burnup regression AT')
+    //     .attr('d', this.regression);
+    // 
+    // /* Failed work */
+    // var regr = compute_regression(data_so_far, function(d) {
+    //     return d.cum_complete_headaches +
+    //            d.cum_maybe_done_headaches +
+    //            d.cum_failed_at_headaches;
+    // });
+    // svg.append('path')
+    //     .datum(regr)
+    //     .attr('class', 'burnup regression failed')
+    //     .attr('d', this.regression);
 
+    /* the scope */
     svg.append('path')
         .datum(data)
         .attr('class', 'total line')
@@ -244,37 +278,36 @@ Burnup.prototype = {
     var last_version = data[data.length-1];
     svg.append('text')
         .attr('class', 'burnup scope marker')
-        .attr('x', x(last_version.name))
+        .attr('x', x(last_version.due_date))
         .attr('y', y(last_version.cum_total_headaches))
         .attr('dx', '.3em')
         .attr('dy', '.3em')
         .text("Scope");
 
-    var last_version = data_so_far[data_so_far.length-1];
-    svg.append('text')
-        .attr('class', 'burnup done marker')
-        .attr('x', x(last_version.name))
-        .attr('y', y(last_version.cum_complete_headaches))
-        .attr('dx', '.3em')
-        .attr('dy', '.3em')
-        .text("Completed");
-    
-    svg.append('text')
-        .attr('class', 'burnup AT marker')
-        .attr('x', x(last_version.name))
-        .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches))
-        .attr('dx', '.3em')
-        .attr('dy', '.3em')
-        .text("Awaiting AT");
-    
-    svg.append('text')
-        .attr('class', 'burnup failed marker')
-        .attr('x', x(last_version.name))
-        .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches + last_version.cum_failed_at_headaches))
-        .attr('dx', '.3em')
-        .attr('dy', '.3em')
-        .text("Failed AT");
-    
+    // var last_version = data_so_far[data_so_far.length-1];
+    // svg.append('text')
+    //     .attr('class', 'burnup done marker')
+    //     .attr('x', x(last_version.name))
+    //     .attr('y', y(last_version.cum_complete_headaches))
+    //     .attr('dx', '.3em')
+    //     .attr('dy', '.3em')
+    //     .text("Completed");
+    // 
+    // svg.append('text')
+    //     .attr('class', 'burnup AT marker')
+    //     .attr('x', x(last_version.name))
+    //     .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches))
+    //     .attr('dx', '.3em')
+    //     .attr('dy', '.3em')
+    //     .text("Awaiting AT");
+    // 
+    // svg.append('text')
+    //     .attr('class', 'burnup failed marker')
+    //     .attr('x', x(last_version.name))
+    //     .attr('y', y(last_version.cum_complete_headaches + last_version.cum_maybe_done_headaches + last_version.cum_failed_at_headaches))
+    //     .attr('dx', '.3em')
+    //     .attr('dy', '.3em')
+    //     .text("Failed AT");
   }
 
 }

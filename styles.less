@@ -121,4 +121,17 @@ svg {
       fill: none !important;
       stroke-dasharray: 10, 5;
   }
+
+  .iteration {
+      &:nth-child(2n) {
+        fill: lightgrey;
+      }
+      &:nth-child(2n+1) {
+        fill: lighten(lightgrey, 10%);
+      }
+  }
+
+  .iterations text {
+      text-anchor: middle !important;
+  }
 }
