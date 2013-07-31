@@ -54,6 +54,17 @@ Burnup.prototype = {
         .y1(function(d) {
             return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
         });
+
+    var burnup_failing = this.burnup_failing = d3.svg.area()
+        .x(function(d) { return x(d.name) })
+        .y0(function(d) {
+            return y(d.cum_complete_headaches + d.cum_maybe_done_headaches)
+        })
+        .y1(function(d) {
+            return y(d.cum_complete_headaches +
+                     d.cum_maybe_done_headaches +
+                     d.cum_failed_at_headaches)
+        });
   },
 
   load: function () {
@@ -69,7 +80,8 @@ Burnup.prototype = {
 
         var cum_total_headaches = 0,
             cum_complete_headaches = 0,
-            cum_maybe_done_headaches = 0;
+            cum_maybe_done_headaches = 0,
+            cum_failed_at_headaches = 0;
 
         /* sort the versions */
         var format = d3.time.format('%Y-%m-%d');
@@ -86,17 +98,15 @@ Burnup.prototype = {
           version.issues = issues_grouped[version.name] || [];
           version.total_headaches = version.issues.reduce(sumHeadaches, 0);
 
-          version.done_issues = version.issues.filter(doneIssues);
-          version.done_headaches = version.done_issues.reduce(sumHeadaches, 0);
-
-          version.maybe_done_issues = version.issues.filter(maybeDoneIssues);
-          version.maybe_done_headaches =
-              version.maybe_done_issues.reduce(sumHeadaches, 0);
+          version.done_headaches = version.issues.filter(doneIssues)
+                                                 .reduce(sumHeadaches, 0);
+          version.maybe_done_headaches = version.issues.filter(maybeDoneIssues)
+                                                       .reduce(sumHeadaches, 0);
+          version.failed_at_headaches = version.issues.filter(failedATissues)
+                                                      .reduce(sumHeadaches, 0);
 
           /* save some memory */
           delete version.issues;
-          delete version.done_issues;
-          delete version.maybe_done_issues;
 
           /* sum cumulative totals */
           cum_total_headaches += version.total_headaches;
@@ -104,10 +114,12 @@ Burnup.prototype = {
 
           cum_complete_headaches += version.done_headaches;
           cum_maybe_done_headaches += version.maybe_done_headaches;
+          cum_failed_at_headaches += version.failed_at_headaches;
 
           if (today >= version.due_date) {
             version.cum_complete_headaches = cum_complete_headaches;
             version.cum_maybe_done_headaches = cum_maybe_done_headaches;
+            version.cum_failed_at_headaches = cum_failed_at_headaches;
           }
         });
 
@@ -153,6 +165,11 @@ Burnup.prototype = {
         .datum(data.filter(completedIterations))
         .attr('class', 'burnup area AT')
         .attr('d', this.burnup_at);
+    
+    svg.append('path')
+        .datum(data.filter(completedIterations))
+        .attr('class', 'burnup area failed')
+        .attr('d', this.burnup_failing);
   }
 
 }
@@ -166,7 +183,14 @@ function sumHeadaches (val1, val2) {
 }
 
 function doneIssues (issue) {
-    return ['Closed', 'Resolved', 'Acceptance Test Passed'].indexOf(issue.status) != -1;
+    return ['Closed',
+            'Resolved',
+            'Acceptance Test Passed'
+           ].indexOf(issue.status) != -1;
+}
+
+function failedATissues (issue) {
+    return ['Acceptance Test Failed'].indexOf(issue.status) != -1;
 }
 
 function maybeDoneIssues (issue) {
