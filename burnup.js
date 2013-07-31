@@ -147,6 +147,7 @@ Burnup.prototype = {
         .attr('transform', 'translate(0,' + height + ')')
         .call(xAxis)
       .append('text')
+        .attr('class', 'label')
         .attr('x', width / 2)
         .attr('y', 40)
         .text("Iteration");
