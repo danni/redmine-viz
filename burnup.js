@@ -13,13 +13,13 @@ Burnup.prototype = {
   init: function () {
     /* set up */
     var margin = {
-      top: 10,
-      right: 10,
-      bottom: 10,
+      top: 50,
+      right: 100,
+      bottom: 100,
       left: 50
     };
-    var width = this.width = 1000 - margin.left - margin.right;
-    var height = this.height = 300 - margin.top - margin.bottom;
+    var width = this.width = window.innerWidth - margin.left - margin.right;
+    var height = this.height = window.innerHeight - margin.top - margin.bottom;
 
     var x = this.x = d3.scale.ordinal()
         .rangePoints([0, width]);
