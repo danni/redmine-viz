@@ -65,6 +65,10 @@ Burnup.prototype = {
                      d.cum_maybe_done_headaches +
                      d.cum_failed_at_headaches)
         });
+
+    var regression = this.regression = d3.svg.line()
+        .x(function(d) { return d.x })
+        .y(function(d) { return d.y });
   },
 
   load: function () {
@@ -161,26 +165,76 @@ Burnup.prototype = {
         .attr('dy', '.71em')
         .text("Headaches");
 
+    var data_so_far = data.filter(completedIterations);
+
+    svg.append('path')
+        .datum(data_so_far)
+        .attr('class', 'burnup area done')
+        .attr('d', this.burnup_done);
+
+    svg.append('path')
+        .datum(data_so_far)
+        .attr('class', 'burnup area AT')
+        .attr('d', this.burnup_at);
+    
+    svg.append('path')
+        .datum(data_so_far)
+        .attr('class', 'burnup area failed')
+        .attr('d', this.burnup_failing);
+
+    /* compute regressions */
+    function compute_regression(datain, key) {
+        var lin = ss.linear_regression()
+            .data(datain.map(function(d) {
+                return [x(d.name), key(d)]
+            }))
+            .line();
+        var out = data.map(function(d) {
+            var x0 = x(d.name);
+
+            return {
+                x: x0,
+                y: y(lin(x0))
+            }
+        });
+
+        return out;
+    }
+
+    /* completed work */
+    var regr = compute_regression(data_so_far,
+            function(d) { return d.cum_complete_headaches });
+    svg.append('path')
+        .datum(regr)
+        .attr('class', 'burnup regression done')
+        .attr('d', this.regression);
+
+    /* AT work */
+    var regr = compute_regression(data_so_far, function(d) {
+        return d.cum_complete_headaches + d.cum_maybe_done_headaches;
+    });
+    svg.append('path')
+        .datum(regr)
+        .attr('class', 'burnup regression AT')
+        .attr('d', this.regression);
+    
+    /* Failed work */
+    var regr = compute_regression(data_so_far, function(d) {
+        return d.cum_complete_headaches +
+               d.cum_maybe_done_headaches +
+               d.cum_failed_at_headaches;
+    });
+    svg.append('path')
+        .datum(regr)
+        .attr('class', 'burnup regression failed')
+        .attr('d', this.regression);
+
     svg.append('path')
         .datum(data)
         .attr('class', 'total line')
         .attr('d', this.total);
 
-    svg.append('path')
-        .datum(data.filter(completedIterations))
-        .attr('class', 'burnup area done')
-        .attr('d', this.burnup_done);
-
-    svg.append('path')
-        .datum(data.filter(completedIterations))
-        .attr('class', 'burnup area AT')
-        .attr('d', this.burnup_at);
-    
-    svg.append('path')
-        .datum(data.filter(completedIterations))
-        .attr('class', 'burnup area failed')
-        .attr('d', this.burnup_failing);
-
+    /* labels */
     var last_version = data[data.length-1];
     svg.append('text')
         .attr('class', 'scope marker')
@@ -189,6 +243,7 @@ Burnup.prototype = {
         .attr('dx', '.3em')
         .attr('dy', '.3em')
         .text("Scope");
+    
   }
 
 }
