@@ -107,11 +107,16 @@ svg {
     }
   }
 
-  .area {
-    &.maybe {
-      fill: lighten(steelblue, 20%);
-      opacity: 0.5;
-    }
+  #AreaGradient {
+      stop[offset="15%"] {
+          stop-color: steelblue;
+          stop-opacity: 0.5;
+      }
+
+      stop[offset="100%"] {
+          stop-color: lighten(steelblue, 20%);
+          stop-opacity: 0.1;
+      }
   }
 
   .today {

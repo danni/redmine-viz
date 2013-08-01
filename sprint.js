@@ -227,6 +227,7 @@ Sprint.prototype = {
         svg.append('path')
             .datum([data[data.length-2], data[data.length-1]])
             .attr('class', 'area maybe')
+            .attr('fill', 'url(#AreaGradient)')
             .attr('clip-path', 'url(#clipRegion)')
             .attr('d', this.additional_burn);
         
