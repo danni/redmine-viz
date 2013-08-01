@@ -139,6 +139,9 @@ Sprint.prototype = {
         width = this.width,
         height = this.height;
 
+    if (this.sprint_drawn)
+        return;
+
     /* assume the sprint starts 2 weeks before the due date */
     var start_date = d3.time.day.offset(version.due_date, -13);
     var end_date = d3.time.day.offset(version.due_date, 1);
@@ -192,6 +195,8 @@ Sprint.prototype = {
         .attr('class', 'total line')
         .attr('d', this.burndown)
         .attr('clip-path', 'url(#clipRegion)');
+
+    this.sprint_drawn = true;
   },
 
   visualise_burndown: function (data) {
@@ -203,14 +208,23 @@ Sprint.prototype = {
         yAxis = this.yAxis,
         width = this.width,
         height = this.height;
-    
-    /* plot the burndown */
-    svg.append('path')
-        .datum(data)
-        .attr('class', 'line done')
-        .attr('marker-end', 'url(#Circle)')
-        .attr('clip-path', 'url(#clipRegion)')
-        .attr('d', this.burndown);
+   
+    if (!this.burndown_drawn) {
+        /* plot the burndown */
+        svg.append('path')
+            .datum(data)
+            .attr('class', 'line done')
+            .attr('marker-end', 'url(#Circle)')
+            .attr('clip-path', 'url(#clipRegion)')
+            .attr('d', this.burndown);
+
+        this.burndown_drawn = true;
+    } else {
+        svg.select('path.done')
+            .datum(data)
+            .transition()
+              .attr('d', this.burndown);
+    }
   },
 }
 
