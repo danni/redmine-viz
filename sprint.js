@@ -39,23 +39,9 @@ Sprint.prototype = {
         .scale(y)
         .orient('left');
 
-    /* the total scope:
-     * the line rises over the iteration from the value at the end of the
-     * last iteration to the final value it should be at the end of the
-     * iteration */
-    var ideal_burndown = this.ideal_burndown = d3.svg.line()
+    var burndown = this.burndown = d3.svg.line()
         .x(function(d) { return x(d.date) })
         .y(function(d) { return y(d.headaches) });
-
-    /* the cumulative burnup */
-    // var burnup_done = this.burnup_done = d3.svg.area()
-    //     .x(function(d) { return x(d.date) })
-    //     .y0(function(d) { return y(0) })
-    //     .y1(function(d) { return y(d.cum_headaches) });
-
-    // var regression = this.regression = d3.svg.line()
-    //     .x(function(d) { return d.x })
-    //     .y(function(d) { return d.y });
   },
 
   load: function () {
@@ -92,89 +78,34 @@ Sprint.prototype = {
 
             console.log("Total headaches:", headaches);
             self.visualise_sprint(version, headaches);
+
+            /* filter the issues to only consider closed issues
+             * and sort by close date */
+            issues = issues.filter(function(i) {
+                if (i.closed_on === undefined)
+                    return false;
+
+                i.closed_on = d3.time.format.iso.parse(i.closed_on);
+                return true;
+            }).sort(function(i1, i2) {
+                return d3.ascending(i1.closed_on, i2.closed_on);
+            });
+
+            /* calculate the cumulative sum */
+            var burndown = issues.map(function(i) {
+                return {
+                    date: i.closed_on,
+                    headaches: headaches -= +i.headaches
+                }
+            });
+
+            console.log(burndown);
+
+            self.visualise_burndown(burndown);
         });
     });
   },
 
-//        /* group the data by version */
-//        var issues_grouped = d3.nest()
-//          .key(function(d) { return d.fixed_version })
-//          .map(issues);
-//
-//        var cum_total_headaches = 0;
-//
-//        /* sort the versions */
-//
-//        versions.sort(function(a, b) {
-//            parse_date(a);
-//            parse_date(b);
-//
-//            return d3.ascending(a.due_date, b.due_date);
-//        });
-//        versions.forEach(function (version) {
-//          parse_date(version);
-//          version.start_date = start_date;
-//          start_date = version.due_date;
-//
-//          version.issues = issues_grouped[version.name] || [];
-//          version.total_headaches = version.issues.reduce(sumHeadaches, 0);
-//
-//          /* save some memory */
-//          delete version.issues;
-//
-//          /* sum cumulative totals */
-//          cum_total_headaches += version.total_headaches;
-//          version.cum_total_headaches = cum_total_headaches;
-//        });
-//
-//        /* remove any versions off the front with 0 headaches,
-//         * these screw up our regressions */
-//        versions = versions.filter(function(v) {
-//            return v.cum_total_headaches > 0;
-//        })
-//
-//        self.first_date = versions[0].start_date;
-//        self.last_date = versions[versions.length-1].due_date;
-//
-//        /* group the issues by date closed, then apply a rollup to count
-//         * the number of headaches closed on each date */
-//        var format = d3.time.format.iso;
-//        var issues_grouped = d3.nest()
-//            .key(function(d) {
-//                d.closed_date = d3.time.day.floor(format.parse(d.closed_on));
-//                return d.closed_date;
-//            })
-//            .rollup(function(leaves) {
-//                return {
-//                    date: leaves[0].closed_date,
-//                    headaches: leaves.reduce(sumHeadaches, 0)
-//                }
-//            })
-//            .map(issues.filter(issueClosed), d3.map)
-//            .values()
-//            .sort(function(d1, d2) {
-//                return d3.ascending(d1.date, d2.date);
-//            }).filter(function(d) {
-//                return d.headaches > 0;
-//            });
-//
-//        var cum_complete_headaches = 0;
-//        issues_grouped.forEach(function(d) {
-//            d.cum_headaches =
-//                cum_complete_headaches += d.headaches;
-//        });
-//
-//        /* add today */
-//        issues_grouped.push({
-//            date: new Date(),
-//            cum_headaches: cum_complete_headaches
-//        });
-//
-//        self.visualise_iterations(versions);
-//        self.visualise_burnup(issues_grouped);
-//      }, '*');
-//    });
-//  },
 
   visualise_sprint: function (version, headaches) {
 
@@ -237,7 +168,7 @@ Sprint.prototype = {
     svg.append('path')
         .datum(burndown)
         .attr('class', 'total line')
-        .attr('d', this.ideal_burndown);
+        .attr('d', this.burndown);
 
     /* plot today */
     var today = d3.time.day.floor(new Date()),
@@ -249,28 +180,10 @@ Sprint.prototype = {
     svg.append('path')
         .datum(data)
         .attr('class', 'today line')
-        .attr('d', this.ideal_burndown);
-
-//    /* append a 0 value */
-//    data.unshift({
-//        due_date: data[0].start_date,
-//        cum_total_headaches: 0
-//    });
-//
-//    /* the scope */
-//
-//    /* labels */
-//    var last_version = data[data.length-1];
-//    svg.append('text')
-//        .attr('class', 'burnup scope marker')
-//        .attr('x', x(last_version.due_date))
-//        .attr('y', y(last_version.cum_total_headaches))
-//        .attr('dx', '.3em')
-//        .attr('dy', '.3em')
-//        .text("Scope");
+        .attr('d', this.burndown);
   },
 
-  visualise_burnup: function (data) {
+  visualise_burndown: function (data) {
 
     var x = this.x,
         y = this.y,
@@ -280,28 +193,11 @@ Sprint.prototype = {
         width = this.width,
         height = this.height;
     
-    var last = data[data.length-1];
-
-    /* plot the burnup */
+    /* plot the burndown */
     svg.append('path')
         .datum(data)
-        .attr('class', 'burnup area done')
-        .attr('d', this.burnup_done);
-
-    /* label the burnup */
-    svg.append('text')
-        .attr('class', 'burnup done marker')
-        .attr('x', x(last.date))
-        .attr('y', y(last.cum_headaches))
-        .attr('dx', '.3em')
-        .attr('dy', '.3em')
-        .text("Completed");
-
-    svg.append('path')
-        .datum(this.compute_regression(data,
-                                       function(d) { return d.cum_headaches }))
-        .attr('class', 'burnup regression done')
-        .attr('d', this.regression);
+        .attr('class', 'line done')
+        .attr('d', this.burndown);
   },
 
   compute_regression: function (datain, key) {
