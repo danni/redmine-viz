@@ -39,7 +39,6 @@ Sprint.prototype = {
         .attr('y', 0)
         .attr('width', width)
         .attr('height', height);
-
     
     var xAxis = this.xAxis = d3.svg.axis()
         .scale(x)
@@ -52,6 +51,11 @@ Sprint.prototype = {
     var burndown = this.burndown = d3.svg.line()
         .x(function(d) { return x(d.date) })
         .y(function(d) { return y(d.headaches) });
+
+    var additional_burn = this.additional_burn = d3.svg.area()
+        .x(function(d) { return x(d.date) })
+        .y0(function(d) { return y(d.headaches - d.awaiting_at) })
+        .y1(function(d) { return y(d.headaches) });
   },
 
   load: function () {
@@ -89,6 +93,14 @@ Sprint.prototype = {
             console.log("Total headaches:", headaches);
             self.visualise_sprint(version, headaches);
 
+            /* calculate the amount of work stuck in AT */
+            var awaiting_test = d3.sum(issues.filter(function(i) {
+                return i.status === 'Acceptance Test';
+            }), function(i) {
+                return i.headaches;
+            });
+            console.log("Awaiting test:", awaiting_test);
+
             /* filter the issues to only consider closed issues
              * and sort by close date */
             issues = issues.filter(function(i) {
@@ -120,7 +132,8 @@ Sprint.prototype = {
             });
             burndown.push({
                 date: new Date(),
-                headaches: headaches_remaining
+                headaches: headaches_remaining,
+                awaiting_at: awaiting_test
             });
 
             self.visualise_burndown(burndown);
@@ -210,6 +223,13 @@ Sprint.prototype = {
         height = this.height;
    
     if (!this.burndown_drawn) {
+        /* plot the data awaiting test */
+        svg.append('path')
+            .datum([data[data.length-2], data[data.length-1]])
+            .attr('class', 'area maybe')
+            .attr('clip-path', 'url(#clipRegion)')
+            .attr('d', this.additional_burn);
+        
         /* plot the burndown */
         svg.append('path')
             .datum(data)
@@ -224,6 +244,12 @@ Sprint.prototype = {
             .datum(data)
             .transition()
               .attr('d', this.burndown);
+
+        svg.select('path.maybe')
+            .datum([data[data.length-2], data[data.length-1]])
+            .transition()
+              .attr('d', this.additional_burn);
+
     }
   },
 }
