@@ -102,18 +102,26 @@ Sprint.prototype = {
             });
 
             /* calculate the cumulative sum */
-            var burndown = issues.map(function(i) {
+            var headaches_remaining = headaches,
+                burndown = issues.map(function(i) {
                 return {
                     date: i.closed_on,
-                    headaches: headaches -= +i.headaches
+                    headaches: headaches_remaining -= +i.headaches
                 }
             });
+
+            /* add the initial point:
+             * assume the sprint starts 2 weeks before the due date */
+            var start_date = d3.time.day.offset(version.due_date, -13);
+            burndown.unshift({
+                date: start_date,
+                headaches: headaches
             /* add a point for right now */
+            });
             burndown.push({
                 date: new Date(),
-                headaches: headaches
+                headaches: headaches_remaining
             });
-            console.log(burndown);
 
             self.visualise_burndown(burndown);
         });
