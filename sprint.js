@@ -212,35 +212,6 @@ Sprint.prototype = {
         .attr('clip-path', 'url(#clipRegion)')
         .attr('d', this.burndown);
   },
-
-  compute_regression: function (datain, key) {
-      var x = this.x,
-          y = this.y,
-          start_date = this.first_date,
-          end_date = this.last_date;
-
-      var lin = ss.linear_regression()
-          .data(datain.map(function(d) {
-              return [x(d.date), key(d)]
-          }))
-          .line();
-
-      /* calculate the iteration velocity */
-      var next_date = d3.time.week.offset(start_date, 2),
-          velocity = lin(x(next_date)) - lin(x(start_date));
-
-      var a = [{ x: x(start_date), y: y(lin(x(start_date))) },
-               { x: x(end_date), y: y(lin(x(end_date))) }];
-      return a;
-  }
-}
-
-function cleanup (name) {
-  return name.replace(/[^A-Za-z0-9]+/g, '_');
-}
-
-function sumHeadaches (val1, val2) {
-    return val1 + (+val2.headaches || 0);
 }
 
 function issueClosed (issue) {
