@@ -102,13 +102,13 @@ svg {
       stroke: black;
     }
 
-    &.today {
-      stroke: red;
-    }
-
     &.done {
       stroke: steelblue;
     }
+  }
+
+  .today {
+    fill: lighten(red, 20%);
   }
 
   .burnup {
@@ -141,5 +141,12 @@ svg {
 
   .iterations text {
       text-anchor: middle !important;
+  }
+
+  #Circle {
+    // a marker
+    stroke: steelblue;
+    stroke-width: 1.5px;
+    fill: white;
   }
 }

@@ -26,10 +26,20 @@ Sprint.prototype = {
     var y = this.y = d3.scale.linear()
         .range([height, 0]);
 
-    var svg = this.svg = d3.select('body').append('svg')
+    var svg = this.svg = d3.select('#burndown')
       .append('g')
-        .attr('class', 'burnup')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+    /* add the clip path */
+    d3.select('#burndown defs')
+      .append('clipPath')
+        .attr('id', 'clipRegion')
+      .append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', width)
+        .attr('height', height);
+
     
     var xAxis = this.xAxis = d3.svg.axis()
         .scale(x)
@@ -98,7 +108,11 @@ Sprint.prototype = {
                     headaches: headaches -= +i.headaches
                 }
             });
-
+            /* add a point for right now */
+            burndown.push({
+                date: new Date(),
+                headaches: headaches
+            });
             console.log(burndown);
 
             self.visualise_burndown(burndown);
@@ -141,7 +155,7 @@ Sprint.prototype = {
         .attr('y', 6)
         .attr('dy', '.71em')
         .text("Headaches");
-
+    
     /* calculate the ideal burndown -
      * in 2 weeks we will have 2 weekends, include this in our data */
     var first_fri = d3.time.saturday.ceil(start_date),
@@ -168,19 +182,8 @@ Sprint.prototype = {
     svg.append('path')
         .datum(burndown)
         .attr('class', 'total line')
-        .attr('d', this.burndown);
-
-    /* plot today */
-    var today = d3.time.day.floor(new Date()),
-        data = [
-        { date: today, headaches: headaches },
-        { date: today, headaches: 0 }
-    ];
-    
-    svg.append('path')
-        .datum(data)
-        .attr('class', 'today line')
-        .attr('d', this.burndown);
+        .attr('d', this.burndown)
+        .attr('clip-path', 'url(#clipRegion)');
   },
 
   visualise_burndown: function (data) {
@@ -197,6 +200,8 @@ Sprint.prototype = {
     svg.append('path')
         .datum(data)
         .attr('class', 'line done')
+        .attr('marker-end', 'url(#Circle)')
+        .attr('clip-path', 'url(#clipRegion)')
         .attr('d', this.burndown);
   },
 
@@ -215,7 +220,6 @@ Sprint.prototype = {
       /* calculate the iteration velocity */
       var next_date = d3.time.week.offset(start_date, 2),
           velocity = lin(x(next_date)) - lin(x(start_date));
-      console.log("Velocity (per 14 day iteration):", velocity);
 
       var a = [{ x: x(start_date), y: y(lin(x(start_date))) },
                { x: x(end_date), y: y(lin(x(end_date))) }];
