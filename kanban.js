@@ -124,7 +124,7 @@ Kanban.prototype = {
           for (var elem = this; elem; elem = elem.previousSibling) {
               d3.select(elem)
                 .transition().duration(350)
-                    .attr('y', function() { console.log(elem, p); return p-- * SPACING });
+                    .attr('y', function() { return p-- * SPACING; });
           }
 
       })
