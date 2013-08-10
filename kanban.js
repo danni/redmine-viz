@@ -16,8 +16,9 @@ Kanban.prototype = {
       bottom: 10,
       left: 10
     };
-    var width = 1000 - margin.left - margin.right;
-    var height = 300 - margin.top - margin.bottom;
+
+    var width = this.width = window.innerWidth - margin.left - margin.right;
+    var height = this.height = window.innerHeight - margin.top - margin.bottom;
 
     var x = this.x = d3.scale.ordinal()
         .rangeRoundBands([0, width], 0.2);
@@ -29,6 +30,7 @@ Kanban.prototype = {
 
     x.domain(FILTER_STATUSES);
 
+    /* create the table header labels */
     this.labels = svg.append('g')
         .attr('class', 'labels')
       .selectAll('text')
@@ -72,7 +74,8 @@ Kanban.prototype = {
     var GOLDEN_RATIO = 1.61803398875,
         CARD_WIDTH = x.rangeBand(),
         CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
-        SPACING = 2;
+        SPACING = d3.min([(self.height - CARD_HEIGHT) / issues.length,
+                          CARD_HEIGHT + 2]);
 
     svg.append('g')
         .attr('class', 'status ' + status)
@@ -82,7 +85,7 @@ Kanban.prototype = {
         .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
         .attr('opacity', 0)
         .attr('x', function(d) { return x(d.status); })
-        .attr('y', function(d, i) { return i * (CARD_HEIGHT + SPACING); })
+        .attr('y', function(d, i) { return i * SPACING; })
         .attr('width', CARD_WIDTH)
         .attr('height', CARD_HEIGHT)
       .each(function(d) {
@@ -93,6 +96,7 @@ Kanban.prototype = {
 
           card.append('p')
             .attr('class', 'issuename')
+            /* FIXME: add link to issue in RM */
             .text(d.tracker + ' #' + d.id);
 
           card.append('p')
