@@ -78,16 +78,13 @@ Kanban.prototype = {
         .attr('class', 'status ' + status)
       .selectAll('rect')
         .data(issues)
-      /* append a group for each new line in the data */
       .enter().append('foreignObject')
         .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
-        // .attr('opacity', 0)
+        .attr('opacity', 0)
         .attr('x', function(d) { return x(d.status); })
         .attr('y', function(d, i) { return i * (CARD_HEIGHT + SPACING); })
         .attr('width', CARD_WIDTH)
         .attr('height', CARD_HEIGHT)
-
-      /* create the card for each group */
       .each(function(d) {
           var card = d3.select(this)
             .append('xhtml:body')
@@ -109,7 +106,9 @@ Kanban.prototype = {
           card.append('p')
             .attr('class', 'project')
             .text(d.project);
-      });
+      })
+      .transition().duration(750)
+        .attr('opacity', 1);
 
     console.log(issues[0]);
   },
