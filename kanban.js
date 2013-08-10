@@ -77,9 +77,10 @@ Kanban.prototype = {
         SPACING = d3.min([(self.height - CARD_HEIGHT) / issues.length,
                           CARD_HEIGHT + 2]);
 
-    svg.append('g')
-        .attr('class', 'status ' + status)
-      .selectAll('rect')
+    var statusgroup = svg.append('g')
+        .attr('class', 'status ' + status);
+
+    statusgroup.selectAll('.issue')
         .data(issues)
       .enter().append('foreignObject')
         .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
@@ -110,6 +111,22 @@ Kanban.prototype = {
           card.append('p')
             .attr('class', 'project')
             .text(d.project);
+      })
+      .on('click', function(d, i) {
+          var p = i;
+
+          /* animate showing a card when it is clicked on */
+          for (var elem = this.nextSibling; elem; elem = elem.nextSibling) {
+              d3.select(elem)
+                .transition().duration(350)
+                    .attr('y', function() { return i++ * SPACING + CARD_HEIGHT + 2; });
+          }
+          for (var elem = this; elem; elem = elem.previousSibling) {
+              d3.select(elem)
+                .transition().duration(350)
+                    .attr('y', function() { console.log(elem, p); return p-- * SPACING });
+          }
+
       })
       .transition().duration(750)
         .attr('opacity', 1);
