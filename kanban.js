@@ -11,37 +11,34 @@ Kanban.prototype = {
   init: function () {
     /* set up */
     var margin = {
-      top: 10,
+      top: 25,
       right: 10,
       bottom: 10,
-      left: 200
+      left: 10
     };
     var width = 1000 - margin.left - margin.right;
     var height = 300 - margin.top - margin.bottom;
 
-    var x = this.x = d3.scale.linear()
-        .range([0, width]);
-    var y = this.y = d3.scale.ordinal()
-        .rangeRoundBands([0, height], 0.2);
+    var x = this.x = d3.scale.ordinal()
+        .rangeRoundBands([0, width], 0.2);
 
-    var svg = this.svg = d3.select('body').append('svg')
+    var svg = this.svg = d3.select('#kanban')
       .append('g')
+        .attr('class', 'board')
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    /* specify the domain of the axes */
-    // FIXME: x domain is hard coded
-    x.domain([0, 30]);
-    y.domain(FILTER_STATUSES);
+    x.domain(FILTER_STATUSES);
 
     this.labels = svg.append('g')
         .attr('class', 'labels')
       .selectAll('text')
-        .data(y.domain())
+        .data(x.domain())
       .enter().append('text')
         .attr('class', 'label')
-        .attr('x', -6)
-        .attr('y', function(d) { return y(d) + y.rangeBand() / 2; })
-        .text(function (d) { return d })
+        .attr('x', function(d) { return x(d) + x.rangeBand() / 2; })
+        .attr('y', '-2pt')
+        .text(function (d) { return d; })
+        .attr('opacity', 0)
       .transition().duration(750)
         .attr('opacity', 1);
   },
@@ -56,69 +53,65 @@ Kanban.prototype = {
         self.redmine.load_issues(function (issues) {
           console.log(k + ": " + issues.length);
 
-          self.process(issues);
+          self.process(issues, k);
         }, v);
       });
     });
   },
 
-  process: function (data) {
+  process: function (issues, status) {
     var self = this;
 
-    /* group the issues by project */
-    data = d3.nest()
-        .key(function(d) { return d.project })
-        .map(data, d3.map);
+    var svg = this.svg,
+        x = this.x;
 
-    /* rearrange the map and calculate the stacking */
-    var y0 = 0,
-        out = {};
-
-    data.forEach(function(k, v) {
-
-      var y = y0 + v.length;
-
-      out[k] = {
-        project: k,
-        status: v[0].status,
-        tickets: v,
-        y0: y0,
-        y: y
-      };
-
-
-      y0 = y;
+    issues.sort(function(i1, i2) {
+        return d3.ascending(i1.id, i2.id);
     });
 
-    /* flatten the data */
-    data = d3.map(out).values();
+    var GOLDEN_RATIO = 1.61803398875,
+        CARD_WIDTH = x.rangeBand(),
+        CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
+        SPACING = 2;
 
-    self.visualise(data);
-  },
-
-  visualise: function (data) {
-
-    var x = this.x,
-        y = this.y,
-        svg = this.svg;
-
-    /* create a single bar */
-    var projects = svg.append('g')
-        .attr('class', 'status')
+    svg.append('g')
+        .attr('class', 'status ' + status)
       .selectAll('rect')
-        .data(data)
-      .enter().append('rect')
-        .attr('class', function(d) {
-          return cleanup(d.status) + ' P_' + cleanup(d.project);
-        })
-        .attr('x', function(d) { return x(d.y0); })
-        .attr('y', function(d) { return y(d.status); })
-        .attr('width', function(d) { return x(d.y) - x(d.y0); })
-        .attr('height', y.rangeBand())
-        .attr('data-tickets', function(d) { return d.tickets.length })
-        .attr('opacity', 0)
-      .transition().duration(750)
-        .attr('opacity', 1);
+        .data(issues)
+      /* append a group for each new line in the data */
+      .enter().append('foreignObject')
+        .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
+        // .attr('opacity', 0)
+        .attr('x', function(d) { return x(d.status); })
+        .attr('y', function(d, i) { return i * (CARD_HEIGHT + SPACING); })
+        .attr('width', CARD_WIDTH)
+        .attr('height', CARD_HEIGHT)
+
+      /* create the card for each group */
+      .each(function(d) {
+          var card = d3.select(this)
+            .append('xhtml:body')
+            .append('div')
+              .attr('class', 'card');
+
+          card.append('p')
+            .attr('class', 'issuename')
+            .text(d.tracker + ' #' + d.id);
+
+          card.append('p')
+            .attr('class', 'version')
+            .text(d.fixed_version);
+
+          card.append('p')
+            .attr('class', 'desc')
+            .text(d.subject);
+
+          card.append('p')
+            .attr('class', 'project')
+            .text(d.project);
+      });
+
+    console.log(issues[0]);
   },
 }
 

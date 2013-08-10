@@ -1,0 +1,126 @@
+@import url(http://fonts.googleapis.com/css?family=Roboto+Condensed:300);
+
+.set_colour(@colour) {
+  background-color: lighten(@colour, 5%);
+  border: 1px solid darken(@colour, 5%);
+}
+
+* {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+svg {
+  width: 100%;
+  height: 99%;
+}
+
+text {
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 300;
+  font-size: 12pt;
+}
+
+.labels {
+    .label {
+        text-anchor: middle;
+    }
+}
+
+.issue {
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+
+    .card {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+
+        padding: 2px;
+
+        // FIXME: add some card-like texture
+    }
+
+    p {
+        font-family: 'Roboto Condensed', sans-serif;
+        font-weight: 300;
+        font-size: 8pt;
+    }
+
+    .corner {
+        width: 50%;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        position: absolute;
+    }
+
+    .issuename {
+        .corner;
+        top: 0px;
+        left: 1px;
+    }
+
+    .desc {
+        /* center alignment */
+        position: relative;
+        top: 12pt;
+        text-align: center;
+    }
+
+    .version {
+        .corner;
+        top: 0px;
+        right: 1px;
+        text-align: right;
+    }
+
+    .project {
+        .corner;
+        left: 1px;
+        bottom: 0px;
+    }
+}
+
+.card {
+    border: 1px solid gray;
+}
+
+.P_QIPPS_4 {
+    .card {
+        .set_colour(pink);
+    }
+}
+
+.P_Online_Update_App,
+.P_ISS_3 {
+    .card {
+      .set_colour(lightblue);
+    }
+}
+
+.P_Respite_Seeker,
+.P_Service_Seeker,
+.P_Web_Services_Xchange {
+    .card {
+        .set_colour(lightgreen);
+    }
+}
+
+.P_S2S_eReferral_Waitlist,
+.P_IX_Perl_Library,
+.P_API_Docs,
+.P_Profile_Server {
+    .card {
+        .set_colour(yellow);
+    }
+}
