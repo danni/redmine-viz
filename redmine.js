@@ -2,6 +2,7 @@
 
 function Redmine (project) {
   this.project = project || REDMINE_PROJECT;
+  this.users = {};
   this.cache_key = 'rmviz.' + this.project;
   
   /* Set the cache object here. Either localStorage or a "fake"
@@ -291,6 +292,30 @@ Redmine.prototype = {
         });
   },
 
+  load_user: function (user, callback) {
+      var self = this;
+
+      if (user === undefined) {
+          callback(undefined);
+          return;
+      }
+
+      /* look to see if this user is already in the cache */
+      if (user in self.users) {
+          callback(self.users[user]);
+          return;
+      }
+
+      d3.jsonp(self.get_uri()
+          .directory('users')
+          .filename(user + '.json')
+          .normalize(),
+          function (data) {
+              self.users[user] = data.user;
+              callback(data.user);
+          });
+  },
+
   /**
    * flatten:
    *
@@ -310,6 +335,7 @@ Redmine.prototype = {
       d3.map(record).forEach(function (k, v) {
         if (v instanceof Object) {
           record[k] = v.name;
+          record[k + '_id'] = v.id;
         }
       });
     });

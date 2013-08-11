@@ -111,6 +111,20 @@ Kanban.prototype = {
           card.append('p')
             .attr('class', 'project')
             .text(d.project);
+
+          self.redmine.load_user(d.assigned_to_id, function(user) {
+              if (!user)
+                  return;
+
+              card.append('img')
+                  .attr('class', 'avatar')
+                  .attr('src', get_gravatar(user.mail, 30))
+                  .attr('alt', d.assigned_to)
+                  .attr('title', d.assigned_to)
+                  .style('opacity', 0)
+                .transition().duration(500)
+                  .style('opacity', 1);
+          });
       })
       .on('click', function(d, i) {
           var p = i;
