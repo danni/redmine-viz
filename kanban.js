@@ -58,7 +58,7 @@ Kanban.prototype = {
   },
 
   allocate: function () {
-    var svg = this.svg,
+    var self = this,
         x = this.x,
         margin = this.margin;
     
@@ -69,21 +69,33 @@ Kanban.prototype = {
 
     d3.selectAll('.status')
         .each(function() {
-            var issues = d3.select(this).selectAll('.issue'),
-                len = issues.size();
-
-            var GOLDEN_RATIO = 1.61803398875,
-                CARD_WIDTH = x.rangeBand(),
-                CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
-                SPACING = d3.min([(height - CARD_HEIGHT) / len,
-                                  CARD_HEIGHT + 2]);
-
-            issues.transition()
-                .attr('x', function(d) { return x(d.status); })
-                .attr('y', function(d, i) { return i * SPACING; })
-                .attr('width', CARD_WIDTH)
-                .attr('height', CARD_HEIGHT);
+            self.allocate_status(this);
         });
+  },
+
+  allocate_status: function (statusgroup, transition) {
+      if (!(statusgroup instanceof d3.selection))
+          statusgroup = d3.select(statusgroup);
+
+      var issues = statusgroup.selectAll('.issue'),
+          len = issues.size();
+
+      var x = this.x,
+          height = this.height,
+          GOLDEN_RATIO = 1.61803398875,
+          CARD_WIDTH = x.rangeBand(),
+          CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
+          SPACING = d3.min([(height - CARD_HEIGHT) / len,
+                            CARD_HEIGHT + 2]);
+
+      if (transition === true || transition === undefined)
+          issues = issues.transition();
+
+      issues
+          .attr('x', function(d) { return x(d.status); })
+          .attr('y', function(d, i) { return i * SPACING; })
+          .attr('width', CARD_WIDTH)
+          .attr('height', CARD_HEIGHT);
   },
 
   process: function (issues, status) {
@@ -111,11 +123,6 @@ Kanban.prototype = {
       .enter().append('foreignObject')
         .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
         .attr('opacity', 0)
-        /* FIXME remove duplication of this code */
-        .attr('x', function(d) { return x(d.status); })
-        .attr('y', function(d, i) { return i * SPACING; })
-        .attr('width', CARD_WIDTH)
-        .attr('height', CARD_HEIGHT)
       .each(function(d) {
           var card = d3.select(this)
             .append('xhtml:body')
@@ -176,7 +183,7 @@ Kanban.prototype = {
       .transition().duration(750)
         .attr('opacity', 1);
 
-    console.log(issues[0]);
+    self.allocate_status(statusgroup, false);
   },
 }
 
