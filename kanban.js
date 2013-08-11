@@ -94,6 +94,8 @@ Kanban.prototype = {
       issues
           .attr('x', function(d) { return x(d.status); })
           .attr('y', function(d, i) { return i * SPACING; })
+          .attr('data-y', function(d, i) { return i * SPACING; })
+          .attr('data-spacing', SPACING)
           .attr('width', CARD_WIDTH)
           .attr('height', CARD_HEIGHT);
   },
@@ -108,12 +110,6 @@ Kanban.prototype = {
     issues.sort(function(i1, i2) {
         return d3.ascending(i1.id, i2.id);
     });
-
-    var GOLDEN_RATIO = 1.61803398875,
-        CARD_WIDTH = x.rangeBand(),
-        CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
-        SPACING = d3.min([(self.height - CARD_HEIGHT) / issues.length,
-                          CARD_HEIGHT + 2]);
 
     var statusgroup = svg.append('g')
         .attr('class', 'status ' + status);
@@ -167,18 +163,20 @@ Kanban.prototype = {
       .on('mouseenter', function(d, i) {
           var p = i;
 
-          /* animate showing a card when it is clicked on */
-          for (var elem = this.nextSibling; elem; elem = elem.nextSibling) {
-              d3.select(elem)
-                .transition().duration(350)
-                    .attr('y', function() { return i++ * SPACING + CARD_HEIGHT + 2; });
-          }
-          for (var elem = this; elem; elem = elem.previousSibling) {
-              d3.select(elem)
-                .transition().duration(350)
-                    .attr('y', function() { return p-- * SPACING; });
-          }
+          statusgroup.selectAll('.issue')
+              .transition()
+            .attr('y', function(d,i) {
+                var card = d3.select(this),
+                    y = +card.attr('data-y'),
+                    height = +card.attr('height'),
+                    spacing = +card.attr('data-spacing');
 
+                if (i <= p) {
+                    return y;
+                } else if (i > p) {
+                    return y + height - spacing + 2;
+                }
+            });
       })
       .transition().duration(750)
         .attr('opacity', 1);
