@@ -92,6 +92,11 @@ Kanban.prototype = {
       .each(function(d) {
           var card = d3.select(this)
             .append('xhtml:body')
+            .append('a')
+              .attr('href', self.redmine.get_uri()
+                                    .directory('issues')
+                                    .filename(d.id + '.html')
+                                    .normalize())
             .append('div')
               .attr('class', 'card');
 
@@ -126,7 +131,8 @@ Kanban.prototype = {
                   .style('opacity', 1);
           });
       })
-      .on('click', function(d, i) {
+      .on('mouseenter', function(d, i) {
+          console.log('eventful');
           var p = i;
 
           /* animate showing a card when it is clicked on */
