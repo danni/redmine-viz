@@ -9,19 +9,14 @@ function Kanban (redmine) {
 Kanban.prototype = {
 
   init: function () {
-    /* set up */
-    var margin = {
+    var margin = this.margin = {
       top: 25,
       right: 10,
       bottom: 10,
       left: 10
     };
 
-    var width = this.width = window.innerWidth - margin.left - margin.right;
-    var height = this.height = window.innerHeight - margin.top - margin.bottom;
-
     var x = this.x = d3.scale.ordinal()
-        .rangeRoundBands([0, width], 0.2);
 
     var svg = this.svg = d3.select('#kanban')
       .append('g')
@@ -29,6 +24,7 @@ Kanban.prototype = {
         .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     x.domain(FILTER_STATUSES);
+    this.allocate();
 
     /* create the table header labels */
     this.labels = svg.append('g')
@@ -61,12 +57,42 @@ Kanban.prototype = {
     });
   },
 
+  allocate: function () {
+    var svg = this.svg,
+        x = this.x,
+        margin = this.margin;
+    
+    var width = this.width = window.innerWidth - margin.left - margin.right;
+    var height = this.height = window.innerHeight - margin.top - margin.bottom;
+
+    x.rangeRoundBands([0, width], 0.2);
+
+    d3.selectAll('.status')
+        .each(function() {
+            var issues = d3.select(this).selectAll('.issue'),
+                len = issues.size();
+
+            var GOLDEN_RATIO = 1.61803398875,
+                CARD_WIDTH = x.rangeBand(),
+                CARD_HEIGHT = CARD_WIDTH / GOLDEN_RATIO,
+                SPACING = d3.min([(height - CARD_HEIGHT) / len,
+                                  CARD_HEIGHT + 2]);
+
+            issues.transition()
+                .attr('x', function(d) { return x(d.status); })
+                .attr('y', function(d, i) { return i * SPACING; })
+                .attr('width', CARD_WIDTH)
+                .attr('height', CARD_HEIGHT);
+        });
+  },
+
   process: function (issues, status) {
     var self = this;
 
     var svg = this.svg,
-        x = this.x;
-
+        x = this.x,
+        margin = this.margin;
+    
     issues.sort(function(i1, i2) {
         return d3.ascending(i1.id, i2.id);
     });
@@ -85,6 +111,7 @@ Kanban.prototype = {
       .enter().append('foreignObject')
         .attr('class', function(d) { return 'issue P_' + cleanup(d.project); })
         .attr('opacity', 0)
+        /* FIXME remove duplication of this code */
         .attr('x', function(d) { return x(d.status); })
         .attr('y', function(d, i) { return i * SPACING; })
         .attr('width', CARD_WIDTH)
@@ -102,7 +129,6 @@ Kanban.prototype = {
 
           card.append('p')
             .attr('class', 'issuename')
-            /* FIXME: add link to issue in RM */
             .text(d.tracker + ' #' + d.id);
 
           card.append('p')
@@ -132,7 +158,6 @@ Kanban.prototype = {
           });
       })
       .on('mouseenter', function(d, i) {
-          console.log('eventful');
           var p = i;
 
           /* animate showing a card when it is clicked on */

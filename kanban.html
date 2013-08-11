@@ -29,5 +29,9 @@
     var viz = new Kanban(redmine);
 
     viz.load();
+
+    d3.select(window).on('resize', function() {
+      viz.allocate();
+    });
   </script>
 </html>
