@@ -1,10 +1,14 @@
 var REDMINE_SERVER = '';
-var REDMINE_PROJECT = 'projects';
+# override in URL with #project
+var REDMINE_PROJECT = 'myproject';
 var API_KEY = '';
 
+/* For Kanban board */
 var FILTER_STATUSES = [
   "Blocked",
+  "In Progress",
   "Peer Review",
   "Acceptance Test",
   "Acceptance Test Failed",
+  "Acceptance Test Passed",
 ];
