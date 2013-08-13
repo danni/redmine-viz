@@ -12,7 +12,7 @@ Kanban.prototype = {
     var margin = this.margin = {
       top: 25,
       right: 10,
-      bottom: 10,
+      bottom: 0,
       left: 10
     };
 
@@ -165,6 +165,7 @@ Kanban.prototype = {
 
           statusgroup.selectAll('.issue')
               .transition()
+            .style('opacity', 1)
             .attr('y', function(d,i) {
                 var card = d3.select(this),
                     y = +card.attr('data-y'),
